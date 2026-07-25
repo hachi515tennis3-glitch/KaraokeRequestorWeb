@@ -83,15 +83,22 @@ DB 上は日本語文字列。API 入力は数値も受理する（出力は日�
   "features": {
     "mypage": true, "bingo": false, "keychange": false, "secret": true,
     "bgv": false, "userpause": false, "haishin": true, "nonamerequest": false,
-    "google_sync": false, "easyauth": false,
-    "new_request_list": true, "new_search_ui": true
+    "otherplayer": false, "google_sync": false, "easyauth": false,
+    "new_request_list": true, "new_search_ui": true, "metadata_edit": true
   },
   "player":  { "mode": 3, "autoplay": false },
-  "request": { "noname_username": "名無しさん" }
+  "request": { "noname_username": "名無しさん", "otherplayer_disc": "別プレイヤー再生" },
+  "server":  { "room_name": "101",
+               "rooms": [ { "name": "101", "url": "http://192.168.1.10/" },
+                          { "name": "102", "url": "http://192.168.1.11/" } ] }
 }}
 ```
 
 `player.mode`: 1=MPC-BE / 2=foobar2000 / 3=自動 / 4=その他
+
+`server.room_name`: Web 版で「〇〇部屋」と表示される部屋名（別部屋 URL 設定の先頭の部屋番号）。未設定時は空文字（アプリ側は接続先 URL などを表示する）。
+
+`server.rooms`: 移動できる部屋の一覧。Web 版の部屋ドロップダウンと同じ条件（URL が設定されていて「表示する」チェックが付いたもののみ）。未設定時は空配列。
 
 ### GET /api/search.php — 曲検索（生データ）
 
@@ -113,6 +120,33 @@ DB 上は日本語文字列。API 入力は数値も受理する（出力は日�
 
 - `priority` はおすすめ度 (prioritydb による重み。既定 50)
 - サイズ 1 バイト以下（フォルダ等）は除外済み
+
+### GET /api/lister_index.php — ListerDB 期別インデックス・完全一致検索
+
+モバイルアプリの「期別リスト」(年 → 期 → 作品 → 曲) と、検索結果からの再検索
+（作品名 / 歌手名 / シリーズ名 / 動画制作者の完全一致）が使う。
+期の判別は `t_found.song_release_date`（修正ユリウス日。ゆかりすたーがタイアップの
+リリース日を優先して書き込むマージ値）。一般向けのみ対象（tie_up_age_limit < 18）。
+ListerDB 未設定時は 503。
+
+| mode | パラメータ | 応答 (data) |
+|---|---|---|
+| `years` | - | `{ "years":[{"year":2026,"songs":471},...], "no_date":N }` |
+| `quarters` | `year` | `{ "year":2026, "quarters":[{"q":2,"label":"4月〜6月：春","songs":192,"programs":43},...] }` |
+| `programs` | `year`, `quarter` (1〜4) | `{ "year","quarter","label", "programs":[{"program":"作品名","group":"シリーズ名 or null","songs":5},...] }` |
+| `songs` | `program` / `artist` / `group` / `worker` のいずれか（複数は AND、完全一致） | `{ "total":N, "items":[{ song_name, song_ruby, song_artist, program_name, tie_up_group_name, song_op_ed, found_worker, found_path, found_file_size, found_comment },...] }` (最大300件) |
+
+### /api/song_metadata.php — 曲メタデータの取得と修正
+
+アプリの「曲の情報を修正する」画面が使う。修正内容は予約行の `song_name` / `lister_*`
+に反映され (予約一覧の表示が正しくなる)、変更があった項目だけ `metadata_correction`
+テーブル (request.db 内、自動作成) に修正前後が記録される。記録の CSV 出力は
+`metadata_correction_csv.php` (管理者 Basic 認証)。
+
+| メソッド | パラメータ | 応答 (data) |
+|---|---|---|
+| GET | `fullpath` | `{ song_name, song_ruby, lister_artist, lister_artist_ruby, lister_work, lister_work_ruby, lister_op_ed, lister_comment }`。ListerDB 未設定・未ヒットの項目は `""` |
+| POST | `action=correct`, `id` (予約ID) + 上記8項目 (送った項目だけ変更扱い) | `{ updated:N, logged:N }`。読み仮名 (`*_ruby`) は requesttable に列が無いため記録のみ |
 
 ### GET /api/requests.php — 予約一覧（エンベロープ版）
 
@@ -166,8 +200,12 @@ DB 上は日本語文字列。API 入力は数値も受理する（出力は日�
 { "ok":true, "data": { "playing": true,
   "status":"...", "playtime":N, "totaltime":N, "playtime_txt":"...", "totaltime_txt":"...",
   "playingtitle":"...", "playingfile":"...", "playingsinger":"...",
+  "player":"mpc|foobar|none", "keychange":N,
   "nextsong": { "title":"..", "songfile":"..", "show_file":bool, "singer":"..", "kind":".." } } }
 ```
+
+`status` は MPC の状態番号 (文字列)。`"2"`=再生中 / `"1"`=一時停止。
+`keychange` は再生中の曲の現在キー (半音、キー変更操作時に DB へ反映された値)。
 
 ### GET /get_playingstatus_json.php — 再生状態（既存）
 
@@ -271,6 +309,7 @@ MPC-BE / foobar2000 の差を吸収する。プレイヤーは再生中の曲か
 | `volume_get` | ○ | - | 現在音量取得 → `data.volume` |
 | `volume_set` | ○ | - | 音量設定 (value=0〜100) |
 | `volume_up` / `volume_down` | ○ | ○ | 音量 ±5 (mpc は `data.volume` で新値を返す) |
+| `volume_reset` | ○ | - | 曲開始時の初期音量に戻す (startvolume + 制作者別オフセット) → `data.volume` |
 | `mute` | ○ | - | ミュートトグル |
 | `fadeout` | ○ | - | フェードアウト |
 | `keychange` | ○ | - | キー変更 |
@@ -281,6 +320,7 @@ MPC-BE / foobar2000 の差を吸収する。プレイヤーは再生中の曲か
 | `speed_down` / `speed_normal` / `speed_up` | ○ | - | 再生スピード |
 | `size_small` / `size_normal` / `size_large` | ○ | - | 表示サイズ |
 | `mirror` / `show_time` | ○ | - | 左右反転 / 時刻表示 |
+| `comp_get` / `comp_up` / `comp_down` / `comp_reset` | ○ | - | 字幕補正 (白飛び対策) → `data.comp_level` |
 | `command` | ○ | - | 汎用 wm_command 送出 (value=番号)。名前付きにない操作の逃がし |
 
 非対応の組み合わせは 501 を返す。
@@ -294,12 +334,9 @@ MPC-BE / foobar2000 の差を吸収する。プレイヤーは再生中の曲か
 
 ### 字幕補正（明るさ/コントラスト/彩度）
 
-レベル永続化を伴う独自実装のため `/api/` には含まれない。既存の JSON エンドポイントを使う:
-
-```
-GET /mpcctrl_bs5.php?cmd=comp_get | comp_inc | comp_dec | comp_reset | comp_apply
-→ {"level": N}
-```
+`action=comp_*` で操作できる (上表)。実装は `function_playeradjust.php` を
+Web 版 (`mpcctrl_bs5.php?cmd=comp_*` → `{"level": N}`) と共用しており、
+レベルは `player_compensation.json` に永続化される。
 
 ---
 
@@ -318,6 +355,49 @@ GET /mypage_api.php?action=<action>&...
 | `add_favorite_song` / `remove_favorite_song` | 同上 |
 | `add_favorite_keyword` | `keyword`, `search_type`, `search_params` |
 | `remove_favorite_keyword` | `kw_id` |
+
+---
+
+## マイページ（アプリ連携 API）
+
+```
+GET/POST /api/mypage.php?action=<action>&userid=<UUID>&...
+→ {"ok":true, "data":{...}} / {"ok":false, "error":"..."}
+```
+
+`usemypage=1` 時のみ (無効時は 503)。Web 版が Cookie `YkariUserID` で識別するのに対し、
+アプリはクエリ/POST の `userid` で識別する。**userid (UUID) を知っていること自体が認可**
+(Web の cookie と同じモデル)。
+
+### デバイスリンク
+
+| action | パラメータ | 応答 data |
+|---|---|---|
+| `pair_apply` | `code` (Web のデバイスリンクで発行した6文字) | `{userid}`。コードは消費される。無効/期限切れは 404 |
+| `pair_generate` | `userid` | `{code}` (5分有効) |
+
+### データ読み書き
+
+| action | パラメータ | 応答 data |
+|---|---|---|
+| `summary` | `userid` | 表示名・各リスト件数・`google_linked` |
+| `history` | `userid`, `sort`, `order` | `{items:[{fullpath,songfile,kind,times,last_requested_at}]}` |
+| `history_add` / `history_remove` | `fullpath` (+`songfile`,`kind`) | — |
+| `later` / `favorite` | `userid` | `{items:[{fullpath,songfile,kind,added_at}]}` |
+| `later_add` / `later_remove` / `favorite_add` / `favorite_remove` | `fullpath` (+`songfile`,`kind`) | — |
+| `keyword` | `userid` | `{items:[{id,keyword,search_type,search_params,added_at}]}` |
+| `keyword_add` | `keyword`, `search_type`, `search_params` | — |
+| `keyword_remove` | `id` **または** `keyword`+`search_type`+`search_params` (条件一致) | — |
+| `import` | `data` (POST。Web 版エクスポート形式 version 1 の JSON) | `{counts}`。マージ取り込みで冪等 (履歴は fullpath+日時、他は完全一致の重複をスキップ) |
+
+書き込み系アクションの成功時は、Google 連携済み + 自動同期オンなら Drive へも自動保存する
+(Web 版 `mypage_api.php` と同じ挙動。同期失敗しても書き込みの応答は成功のまま)。
+
+※ アプリ (ゆかナビ) の Google 同期は、アプリ自身が relay
+(`mypage_google_relay_server.php` の `app_auth` / `app_poll` / `app_refresh`) 経由で
+認証して Google Drive を直接読み書きする方式のため、この API に Google 系アクションは
+無い (トークンを返す API を持たない)。Web 版の部屋単位の Google 連携
+(`mypage_google_sync.php`) とは Drive 上の同一ファイル (`mypage_data.json`) を共有する。
 
 ---
 

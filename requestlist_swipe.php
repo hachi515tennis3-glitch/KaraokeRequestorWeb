@@ -243,6 +243,17 @@ $requestlist_num = isset($config_ini['requestlist_num']) ? (int)$config_ini['req
 }
 .card-tweet-link:hover { text-decoration: underline; color: #0c85d0; }
 
+/* 曲情報修正リンク */
+.card-metaedit-link {
+  font-size: 11px;
+  color: var(--bs-primary, #0d6efd);
+  text-decoration: none;
+  display: inline-block;
+  margin-top: 3px;
+  margin-right: 10px;
+}
+.card-metaedit-link:hover { text-decoration: underline; }
+
 /* 展開ボタン（技術設定・Tweetを表示） */
 .card-expand-btn {
   background: none;
@@ -738,9 +749,15 @@ function createCardHTML(item, idx, displayMode) {
     var extraMetaHtml = extraChips.length > 0
         ? '<div class="meta-chips">' + extraChips.join('') + '</div>'
         : '';
-    var hasDetails = extraChips.length > 0 || tweetHtml !== '';
+    // 曲情報修正リンク (小休止には不要。マスク行 = 非所有者の未再生シークレットには出さない。
+    // 出し分けはサーバー側の masked フラグに従う)
+    var metaEditHtml = '';
+    if (item.kind !== '小休止' && !item.masked) {
+        metaEditHtml = '<a href="song_metadata_edit_bs5.php?id=' + item.id + '" class="card-metaedit-link">&#9998; 曲情報を修正</a>';
+    }
+    var hasDetails = extraChips.length > 0 || tweetHtml !== '' || metaEditHtml !== '';
     var cardDetailsHtml = hasDetails
-        ? '<div class="card-details">' + extraMetaHtml + tweetHtml + '</div>'
+        ? '<div class="card-details">' + extraMetaHtml + metaEditHtml + tweetHtml + '</div>'
         : '';
     var expandBtnHtml = hasDetails
         ? '<button class="card-expand-btn" aria-label="詳細を展開">&#9662;</button>'
@@ -1400,16 +1417,38 @@ function initAutoReload() {
             }
             return;
         }
-        var source  = new ES('requestlist_event.php?kind=requestlist');
+        // ページが見えていない間は SSE を切断して接続枠を手放す。
+        // バックグラウンドタブの持続接続がブラウザの同一サーバー接続枠
+        // (HTTP/1.1 は最大6本) を占有し続けると、他ページの表示や予約送信が
+        // ブラウザ内で送信待ちのまま止まる (特に Android は接続を保持し続ける)
+        var source  = null;
         var lastkey = 0;
-        source.onmessage = function (e) {
-            if (e.data === 'Bye') { source.close(); return; }
-            var nowkey = e.data;
-            if (nowkey && nowkey !== 'None' && lastkey !== nowkey) {
+        function openEventStream() {
+            if (source) return;
+            source = new ES('requestlist_event.php?kind=requestlist');
+            source.onmessage = function (e) {
+                if (e.data === 'Bye') { closeEventStream(); return; }
+                var nowkey = e.data;
+                if (nowkey && nowkey !== 'None' && lastkey !== nowkey) {
+                    if (!isDragging && shouldAutoReload()) reloadCurrent();
+                    lastkey = nowkey;
+                }
+            };
+        }
+        function closeEventStream() {
+            if (source) { source.close(); source = null; }
+        }
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) {
+                closeEventStream();
+            } else {
+                openEventStream();
+                // 非表示中の変更を取り込む
                 if (!isDragging && shouldAutoReload()) reloadCurrent();
-                lastkey = nowkey;
             }
-        };
+        });
+        window.addEventListener('pagehide', closeEventStream);
+        openEventStream();
     } else {
         setInterval(function () {
             if (!isDragging && shouldAutoReload()) reloadCurrent();
