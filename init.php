@@ -420,6 +420,11 @@ print '</pre>';
     <a href="edit_priority.php" class="btn btn-secondary" > 表示優先度設定 (Everything) </a>
   </p>
 
+  <p>
+  <h3>特設ページ作成</h3>
+    <a href="special_page_builder.php" class="btn btn-secondary" > 特設ページ作成画面 </a>
+  </p>
+
   <h3>オンラインアップデート画面 </h3>
   <p>
     <a href ="online_update.php" class="btn btn-secondary" > オンラインアップデート画面 </a>
