@@ -233,7 +233,7 @@ mark.add{
 
 .checks{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
 .checks li{
-  display:flex;gap:.75rem;align-items:flex-start;
+  display:flex;gap:.75rem;align-items:flex-start;min-width:0;
   background:var(--surface);border:1px solid var(--rule);border-radius:9px;
   padding:.7rem .95rem;font-size:.88rem;line-height:1.7;
 }
@@ -247,7 +247,7 @@ mark.add{
 .checks .what em{
   display:block;color:var(--ink-soft);font-size:.8rem;font-style:normal;
   font-family:"M PLUS 1 Code",ui-monospace,monospace;
-  overflow-x:auto;white-space:nowrap;
+  overflow-wrap:anywhere;line-height:1.6;margin-top:.15rem;
 }
 
 footer{
