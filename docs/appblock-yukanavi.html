@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ゆかナビ遮断スイッチ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=M+PLUS+1+Code:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#f6f8f8;
+  --surface:#ffffff;
+  --surface-2:#eef2f2;
+  --ink:#181d1e;
+  --ink-soft:#5b6667;
+  --ink-faint:#8b9596;
+  --rule:#dbe3e3;
+  --rule-strong:#c3cfcf;
+  --accent:#0b6b76;
+  --accent-soft:#e2f0f1;
+  --on-accent:#ffffff;
+  --block:#9a4b12;
+  --block-soft:#fbeee2;
+  --pass:#1f6b3c;
+  --pass-soft:#e6f3ea;
+  --add-bg:#e8f4ec;
+  --add-bar:#3f9463;
+  --code-bg:#f1f5f5;
+  --shadow:0 1px 2px rgba(24,29,30,.05),0 8px 24px -18px rgba(24,29,30,.35);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0f1415;
+    --surface:#161d1e;
+    --surface-2:#1d2627;
+    --ink:#e8eded;
+    --ink-soft:#a3b0b1;
+    --ink-faint:#778384;
+    --rule:#283233;
+    --rule-strong:#3a4647;
+    --accent:#5fc3ce;
+    --accent-soft:#12292c;
+    --on-accent:#0f1415;
+    --block:#e0a06a;
+    --block-soft:#2a1f14;
+    --pass:#79c797;
+    --pass-soft:#152418;
+    --add-bg:#14261b;
+    --add-bar:#3f9463;
+    --code-bg:#131a1b;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0f1415;
+  --surface:#161d1e;
+  --surface-2:#1d2627;
+  --ink:#e8eded;
+  --ink-soft:#a3b0b1;
+  --ink-faint:#778384;
+  --rule:#283233;
+  --rule-strong:#3a4647;
+  --accent:#5fc3ce;
+  --accent-soft:#12292c;
+  --on-accent:#0f1415;
+  --block:#e0a06a;
+  --block-soft:#2a1f14;
+  --pass:#79c797;
+  --pass-soft:#152418;
+  --add-bg:#14261b;
+  --add-bar:#3f9463;
+  --code-bg:#131a1b;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -18px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Noto Sans JP",system-ui,"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;
+  font-size:16px;
+  line-height:1.85;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:78rem;margin:0 auto;padding:0 1.25rem 5rem;}
+
+.masthead{
+  border-bottom:1px solid var(--rule);
+  background:var(--surface);
+  margin-bottom:3rem;
+}
+.masthead-in{
+  max-width:78rem;margin:0 auto;padding:3.5rem 1.25rem 2.75rem;
+  display:flex;flex-direction:column;gap:1rem;
+}
+.eyebrow{
+  font-family:"M PLUS 1 Code",ui-monospace,monospace;
+  font-size:.75rem;letter-spacing:.14em;
+  color:var(--accent);margin:0;
+}
+h1{
+  font-family:"Zen Kaku Gothic New","Noto Sans JP",sans-serif;
+  font-weight:900;font-size:clamp(1.85rem,4.5vw,2.75rem);
+  line-height:1.25;letter-spacing:-.01em;margin:0;text-wrap:balance;
+}
+.lede{margin:0;max-width:62ch;color:var(--ink-soft);font-size:1.03rem;}
+.meta{
+  display:flex;flex-wrap:wrap;gap:.5rem .6rem;margin-top:.25rem;
+  font-family:"M PLUS 1 Code",ui-monospace,monospace;font-size:.78rem;
+}
+.meta span{
+  border:1px solid var(--rule-strong);border-radius:999px;
+  padding:.2rem .7rem;color:var(--ink-soft);
+}
+
+section{margin-bottom:3.5rem;}
+h2{
+  font-family:"Zen Kaku Gothic New","Noto Sans JP",sans-serif;
+  font-weight:700;font-size:1.35rem;letter-spacing:.01em;
+  margin:0 0 1.1rem;padding-bottom:.5rem;
+  border-bottom:2px solid var(--ink);
+  display:flex;align-items:baseline;gap:.65rem;text-wrap:balance;
+}
+h2 .h2num{
+  font-family:"M PLUS 1 Code",ui-monospace,monospace;
+  font-size:.8rem;color:var(--accent);font-weight:700;
+}
+h3{
+  font-family:"Zen Kaku Gothic New","Noto Sans JP",sans-serif;
+  font-weight:700;font-size:1.05rem;margin:0;
+}
+p{margin:0 0 1rem;max-width:68ch;}
+p:last-child{margin-bottom:0;}
+code{
+  font-family:"M PLUS 1 Code",ui-monospace,monospace;
+  font-size:.88em;background:var(--surface-2);
+  padding:.1em .38em;border-radius:4px;
+}
+a{color:var(--accent);}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px;}
+
+.flow{
+  display:grid;gap:.75rem;
+  grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));
+  margin-bottom:1.25rem;
+}
+.node{
+  background:var(--surface);border:1px solid var(--rule);border-radius:10px;
+  padding:1rem 1.1rem;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;gap:.35rem;
+}
+.node .nlabel{
+  font-family:"M PLUS 1 Code",ui-monospace,monospace;
+  font-size:.72rem;letter-spacing:.1em;color:var(--ink-faint);
+}
+.node .ntitle{font-weight:700;font-size:.97rem;line-height:1.5;}
+.node .nbody{font-size:.85rem;color:var(--ink-soft);line-height:1.7;}
+.node.is-block{border-left:4px solid var(--block);}
+.node.is-pass{border-left:4px solid var(--pass);}
+.node.is-gate{border-left:4px solid var(--accent);}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface);}
+table{border-collapse:collapse;width:100%;min-width:46rem;font-size:.88rem;}
+th,td{text-align:left;padding:.7rem .9rem;border-bottom:1px solid var(--rule);vertical-align:top;}
+thead th{
+  background:var(--surface-2);font-weight:700;white-space:nowrap;
+  font-family:"Zen Kaku Gothic New","Noto Sans JP",sans-serif;
+}
+tbody tr:last-child td{border-bottom:none;}
+td code{background:transparent;padding:0;color:var(--accent);white-space:nowrap;}
+td.def{font-family:"M PLUS 1 Code",ui-monospace,monospace;font-variant-numeric:tabular-nums;color:var(--ink-soft);}
+
+.change{
+  background:var(--surface);border:1px solid var(--rule);border-radius:12px;
+  box-shadow:var(--shadow);margin-bottom:1.25rem;overflow:hidden;
+}
+.change-head{
+  display:flex;align-items:flex-start;gap:.9rem;
+  padding:1rem 1.1rem;
+}
+.step{
+  flex:none;width:1.9rem;height:1.9rem;border-radius:50%;
+  background:var(--accent);color:var(--on-accent);
+  display:grid;place-items:center;
+  font-family:"M PLUS 1 Code",ui-monospace,monospace;font-weight:700;font-size:.85rem;
+}
+.change-head .grow{flex:1 1 auto;min-width:0;}
+.change-head h3{
+  font-family:"M PLUS 1 Code",ui-monospace,monospace;
+  font-size:.95rem;font-weight:700;word-break:break-all;
+}
+.change-why{font-size:.85rem;color:var(--ink-soft);margin:.15rem 0 0;line-height:1.7;}
+.tag{
+  flex:none;font-family:"M PLUS 1 Code",ui-monospace,monospace;
+  font-size:.7rem;letter-spacing:.06em;padding:.25rem .6rem;border-radius:999px;
+  border:1px solid currentColor;white-space:nowrap;
+}
+.tag-new{color:var(--pass);background:var(--pass-soft);}
+.tag-edit{color:var(--accent);background:var(--accent-soft);}
+
+.ba{display:grid;grid-template-columns:1fr;}
+.ba figure{margin:0;min-width:0;border-top:1px solid var(--rule);}
+.ba figcaption{
+  font-family:"M PLUS 1 Code",ui-monospace,monospace;
+  font-size:.72rem;letter-spacing:.08em;color:var(--ink-faint);
+  padding:.55rem 1.1rem;background:var(--surface-2);border-bottom:1px solid var(--rule);
+}
+@media (min-width:62rem){
+  .ba.split{grid-template-columns:1fr 1fr;}
+  .ba.split figure + figure{border-left:1px solid var(--rule);}
+}
+pre{
+  margin:0;padding:1rem 1.1rem;overflow-x:auto;background:var(--code-bg);
+  font-family:"M PLUS 1 Code",ui-monospace,monospace;
+  font-size:.8rem;line-height:1.75;tab-size:4;
+}
+pre code{background:none;padding:0;font-size:inherit;}
+mark.add{
+  display:block;background:var(--add-bg);color:inherit;
+  box-shadow:inset 3px 0 0 var(--add-bar);
+  margin:0 -1.1rem;padding:0 1.1rem 0 calc(1.1rem - 3px);
+  min-height:1.75em;
+}
+
+.note{
+  border-left:4px solid var(--block);background:var(--block-soft);
+  border-radius:0 10px 10px 0;padding:1rem 1.15rem;margin-bottom:1rem;
+}
+.note h3{font-size:.95rem;margin-bottom:.4rem;color:var(--block);}
+.note p{font-size:.9rem;margin-bottom:0;color:var(--ink);max-width:64ch;}
+
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+.checks li{
+  display:flex;gap:.75rem;align-items:flex-start;
+  background:var(--surface);border:1px solid var(--rule);border-radius:9px;
+  padding:.7rem .95rem;font-size:.88rem;line-height:1.7;
+}
+.checks .ok{
+  flex:none;font-family:"M PLUS 1 Code",ui-monospace,monospace;
+  font-size:.72rem;font-weight:700;color:var(--pass);background:var(--pass-soft);
+  border-radius:4px;padding:.15rem .45rem;margin-top:.25rem;
+}
+.checks .what{min-width:0;}
+.checks .what b{font-weight:700;}
+.checks .what em{
+  display:block;color:var(--ink-soft);font-size:.8rem;font-style:normal;
+  font-family:"M PLUS 1 Code",ui-monospace,monospace;
+  overflow-x:auto;white-space:nowrap;
+}
+
+footer{
+  margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--rule);
+  font-size:.8rem;color:var(--ink-faint);
+  font-family:"M PLUS 1 Code",ui-monospace,monospace;
+  overflow-x:auto;
+}
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-in">
+    <p class="eyebrow">KaraokeRequestorWeb / claude/appblock-yukanavi</p>
+    <h1>ゆかナビ遮断スイッチ</h1>
+    <p class="lede">
+      モバイルアプリ「ゆかナビ」からのアクセスを設定ひとつで止め、端末には
+      「ゆかナビからのアクセスをオフにしています」を返して Web 版の検索画面へ
+      自動ジャンプさせます。修正した 5 ファイルの変更前・変更後をそのまま載せています。
+    </p>
+    <div class="meta">
+      <span>新規 1 ファイル</span>
+      <span>修正 4 ファイル</span>
+      <span>設定キー 5 個</span>
+      <span>既定は OFF</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section>
+  <h2><span class="h2num">01</span>遮断のしくみ</h2>
+  <p>
+    ゆかナビは Unity 製で、ネイティブの API 呼び出しも内蔵ブラウザも
+    <code>UnityPlayer/6000.3.19f1 (UnityWebRequest/1.0, libcurl/8.10.1-DEV)</code>
+    という User-Agent を送ります（Apache のアクセスログで確認）。この文字列を目印に、リクエストの入口で振り分けます。
+  </p>
+  <div class="flow">
+    <div class="node is-gate">
+      <span class="nlabel">入口</span>
+      <span class="ntitle">commonfunc.php</span>
+      <span class="nbody">全ページ・全 API が読み込むファイル。先頭で <code>appblock_guard()</code> を呼ぶだけで、遮断の判断を一箇所に集約できます。</span>
+    </div>
+    <div class="node is-block">
+      <span class="nlabel">遮断 A</span>
+      <span class="ntitle">/api/ 配下 → JSON</span>
+      <span class="nbody">アプリ専用 API。<code>{"ok":false,"error":"…","redirect":"…"}</code> を返し、ネイティブ機能はここで止まります。</span>
+    </div>
+    <div class="node is-block">
+      <span class="nlabel">遮断 B</span>
+      <span class="ntitle">Web ページ → 案内 HTML</span>
+      <span class="nbody">メッセージを表示し、<code>meta refresh</code> と <code>location.replace</code> で 3 秒後にジャンプ先へ飛ばします。</span>
+    </div>
+    <div class="node is-pass">
+      <span class="nlabel">通す</span>
+      <span class="ntitle">ジャンプ先と、案内表示後の端末</span>
+      <span class="nbody">ジャンプ先ページ自身は対象外。案内を出した端末には Cookie を発行し、以後の Web ページは通します。</span>
+    </div>
+  </div>
+  <div class="note">
+    <h3>ジャンプ先を遮断対象から外している理由</h3>
+    <p>
+      ジャンプ先の <code>search_bs5.php</code> まで遮断すると「遮断 → ジャンプ → また遮断」で無限ループになります。
+      さらに、案内を出したあとも遮断し続けると、飛ばした先で曲を予約できず誘導そのものが無意味になります。
+      そこで案内ページで Cookie <code>YkariAppWebFallback</code> を発行し、
+      アプリのネイティブ機能だけを止めて Web 版は使えるようにしています。
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="h2num">02</span>追加した設定項目</h2>
+  <p>
+    設定画面の「動作設定 &gt; アプリ接続設定（ゆかナビ）」から変更できます。
+    <code>config.ini</code> の値は他の設定と同じく URL エンコードで保存されます。
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>キー</th><th>既定値</th><th>意味</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>appblock</code></td>
+          <td class="def">0</td>
+          <td>遮断の ON / OFF。<b>0 のあいだは何も起きません</b>ので、更新しただけでは今までどおりです。</td>
+        </tr>
+        <tr>
+          <td><code>appblock_web</code></td>
+          <td class="def">1</td>
+          <td>Web ページも遮断するか。0 にすると <code>/api/</code>（アプリ専用 API）だけを止め、アプリ内ブラウザは素通りします。</td>
+        </tr>
+        <tr>
+          <td><code>appblock_msg</code></td>
+          <td class="def">ゆかナビからのアクセスをオフにしています</td>
+          <td>端末に返すメッセージ。JSON の <code>error</code> と案内ページの見出しの両方になります。</td>
+        </tr>
+        <tr>
+          <td><code>appblock_url</code></td>
+          <td class="def">http://ykr.moe:11059/search_bs5.php</td>
+          <td>自動ジャンプ先。ここに指定したページは遮断対象から外れます。</td>
+        </tr>
+        <tr>
+          <td><code>appblock_ua</code></td>
+          <td class="def">UnityPlayer|YukaNavi|ゆかナビ</td>
+          <td>アプリ判定に使う User-Agent の正規表現。縦棒区切りで複数指定できます。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="h2num">03</span>変更前 / 変更後</h2>
+  <p>番号は適用順です。1 のファイルを置いてから 2 の呼び出しを足す、という順で読めます。</p>
+
+  <div class="change">
+    <div class="change-head">
+      <span class="step">1</span>
+      <div class="grow">
+        <h3>appblock_func.php</h3>
+        <p class="change-why">判定と応答をすべて受け持つ新規ファイル。ロジックをここに閉じ込め、既存ファイルへの変更を最小限にしています。</p>
+      </div>
+      <span class="tag tag-new">新規</span>
+    </div>
+    <div class="ba">
+      <figure>
+        <figcaption>変更後 — 中心となる appblock_guard()（抜粋）</figcaption>
+<pre><code><mark class="add">function appblock_guard()
+{
+    if (PHP_SAPI === 'cli') {
+        return;
+    }
+    if (!appblock_enabled() || !appblock_is_app_client()) {
+        return;
+    }
+    // 設定画面の管理者は常に通す (アプリ経由でも設定を戻せるように)
+    if (($_SERVER['PHP_AUTH_USER'] ?? '') === 'admin') {
+        return;
+    }
+
+    // アプリ専用 API は常に遮断する
+    if (appblock_is_api_request()) {
+        appblock_exit_json();
+    }
+
+    if (!appblock_web_enabled()) {
+        return;
+    }
+    if (appblock_is_redirect_target()) {
+        return;
+    }
+    if (!empty($_COOKIE[APPBLOCK_COOKIE])) {
+        return;
+    }
+
+    if (appblock_wants_json()) {
+        appblock_exit_json();
+    }
+    appblock_exit_html();
+}</mark></code></pre>
+      </figure>
+    </div>
+  </div>
+
+  <div class="change">
+    <div class="change-head">
+      <span class="step">2</span>
+      <div class="grow">
+        <h3>commonfunc.php</h3>
+        <p class="change-why">全ページ・全 API の入口。ファイル先頭に 5 行足すだけで遮断が効きます。</p>
+      </div>
+      <span class="tag tag-edit">修正</span>
+    </div>
+    <div class="ba split">
+      <figure>
+        <figcaption>変更前 — 1〜6 行目</figcaption>
+<pre><code>&lt;?php
+
+require_once 'kara_config.php';
+require_once 'prioritydb_func.php';
+
+date_default_timezone_set('Asia/Tokyo');</code></pre>
+      </figure>
+      <figure>
+        <figcaption>変更後</figcaption>
+<pre><code>&lt;?php
+
+require_once 'kara_config.php';
+require_once 'prioritydb_func.php';
+<mark class="add">require_once 'appblock_func.php';</mark>
+<mark class="add"></mark>
+<mark class="add">// ゆかナビ (モバイルアプリ) からのアクセス遮断。</mark>
+<mark class="add">// config.ini の appblock=1 のときだけ働く。</mark>
+<mark class="add">appblock_guard();</mark>
+
+date_default_timezone_set('Asia/Tokyo');</code></pre>
+      </figure>
+    </div>
+  </div>
+
+  <div class="change">
+    <div class="change-head">
+      <span class="step">3</span>
+      <div class="grow">
+        <h3>kara_config.php</h3>
+        <p class="change-why">設定キーの既定値。<code>update_repo</code> の初期化ブロックの直後に並べています。</p>
+      </div>
+      <span class="tag tag-edit">修正</span>
+    </div>
+    <div class="ba split">
+      <figure>
+        <figcaption>変更前 — 209 行目付近</figcaption>
+<pre><code>        $config_ini = array_merge($config_ini,
+            array("update_repo" =&gt; urlencode($update_repo)));
+    }
+
+    if($config_ini["playerpath_select"] ==
+        urlencode("その他PATH指定" )) {</code></pre>
+      </figure>
+      <figure>
+        <figcaption>変更後</figcaption>
+<pre><code>        $config_ini = array_merge($config_ini,
+            array("update_repo" =&gt; urlencode($update_repo)));
+    }
+<mark class="add"></mark>
+<mark class="add">    // ==== ゆかナビ からのアクセス遮断 ====</mark>
+<mark class="add">    // appblock=1 で有効。判定と応答は appblock_func.php を参照。</mark>
+<mark class="add">    if(!array_key_exists("appblock", $config_ini)){</mark>
+<mark class="add">        $config_ini = array_merge($config_ini,array("appblock" =&gt; 0));</mark>
+<mark class="add">    }</mark>
+<mark class="add">    if(!array_key_exists("appblock_web", $config_ini)){</mark>
+<mark class="add">        $config_ini = array_merge($config_ini,array("appblock_web" =&gt; 1));</mark>
+<mark class="add">    }</mark>
+<mark class="add">    if(!array_key_exists("appblock_msg", $config_ini)){</mark>
+<mark class="add">        $config_ini["appblock_msg"] =</mark>
+<mark class="add">            urlencode("ゆかナビからのアクセスをオフにしています");</mark>
+<mark class="add">    }</mark>
+<mark class="add">    if(!array_key_exists("appblock_url", $config_ini)){</mark>
+<mark class="add">        $config_ini["appblock_url"] =</mark>
+<mark class="add">            urlencode("http://ykr.moe:11059/search_bs5.php");</mark>
+<mark class="add">    }</mark>
+<mark class="add">    if(!array_key_exists("appblock_ua", $config_ini)){</mark>
+<mark class="add">        $config_ini["appblock_ua"] =</mark>
+<mark class="add">            urlencode("UnityPlayer|YukaNavi|ゆかナビ");</mark>
+<mark class="add">    }</mark>
+
+    if($config_ini["playerpath_select"] ==
+        urlencode("その他PATH指定" )) {</code></pre>
+      </figure>
+    </div>
+  </div>
+
+  <div class="change">
+    <div class="change-head">
+      <span class="step">4</span>
+      <div class="grow">
+        <h3>init.php</h3>
+        <p class="change-why">設定画面。もくじにリンクを 1 件、Google同期設定の下に設定カードを 1 枚追加しています。</p>
+      </div>
+      <span class="tag tag-edit">修正</span>
+    </div>
+    <div class="ba split">
+      <figure>
+        <figcaption>変更前 — もくじ（350 行目付近）</figcaption>
+<pre><code>    &lt;li class="menu"&gt;
+     &lt;a href="#googlesync" class="menulink"&gt; Google同期設定 &lt;/a&gt;
+    &lt;/li&gt;
+    &lt;/ul&gt;</code></pre>
+      </figure>
+      <figure>
+        <figcaption>変更後</figcaption>
+<pre><code>    &lt;li class="menu"&gt;
+     &lt;a href="#googlesync" class="menulink"&gt; Google同期設定 &lt;/a&gt;
+    &lt;/li&gt;
+<mark class="add">    &lt;li class="menu"&gt;</mark>
+<mark class="add">     &lt;a href="#appblock_t" class="menulink"&gt; アプリ接続（ゆかナビ） &lt;/a&gt;</mark>
+<mark class="add">    &lt;/li&gt;</mark>
+    &lt;/ul&gt;</code></pre>
+      </figure>
+    </div>
+    <div class="ba">
+      <figure>
+        <figcaption>変更後 — 設定カード（Google同期設定と「設定」ボタンの間・抜粋）</figcaption>
+<pre><code><mark class="add">&lt;?php
+  $appblock_on     = ($config_ini['appblock'] ?? 0) == 1;
+  $appblock_web_on = ($config_ini['appblock_web'] ?? 1) == 1;
+?&gt;
+&lt;div class="card cfg-card mb-4"&gt;&lt;div class="card-body"&gt;
+  &lt;div class="mb-3"&gt;
+    &lt;h3 id="appblock_t" class="radio form-label menulink"&gt; アプリ接続設定（ゆかナビ） &lt;/h3&gt;
+
+    &lt;h4 class="radio form-label"&gt; ゆかナビからのアクセス &lt;/h4&gt;
+    &lt;label class="radio-inline"&gt;
+      &lt;input type="radio" name="appblock" value="0"
+        &lt;?php print $appblock_on ? '' : 'checked' ?&gt; /&gt; 許可する
+    &lt;/label&gt;
+    &lt;label class="radio-inline"&gt;
+      &lt;input type="radio" name="appblock" value="1"
+        &lt;?php print $appblock_on ? 'checked' : '' ?&gt; /&gt; 遮断する
+    &lt;/label&gt;
+
+    &lt;h4 class="form-label"&gt; 端末に返すメッセージ &lt;/h4&gt;
+    &lt;input type="text" name="appblock_msg" class="form-control" … /&gt;
+
+    &lt;h4 class="form-label"&gt; 自動ジャンプ先URL &lt;/h4&gt;
+    &lt;input type="text" name="appblock_url" class="form-control" … /&gt;
+
+    &lt;h4 class="form-label"&gt; アプリ判定のUser-Agentパターン &lt;/h4&gt;
+    &lt;input type="text" name="appblock_ua" class="form-control" … /&gt;
+  &lt;/div&gt;
+&lt;/div&gt;&lt;/div&gt;</mark></code></pre>
+      </figure>
+    </div>
+  </div>
+
+  <div class="change">
+    <div class="change-head">
+      <span class="step">5</span>
+      <div class="grow">
+        <h3>api/README.md</h3>
+        <p class="change-why">アプリ側の実装者向けに、遮断時の応答仕様を「認証」節の下へ追記しています。</p>
+      </div>
+      <span class="tag tag-edit">修正</span>
+    </div>
+    <div class="ba">
+      <figure>
+        <figcaption>変更後 — 追記した節（抜粋）</figcaption>
+<pre><code><mark class="add">### アプリからのアクセス遮断 (appblock)
+
+{
+  "ok": false,
+  "error": "ゆかナビからのアクセスをオフにしています",
+  "blocked": "appblock",
+  "redirect": "http://ykr.moe:11059/search_bs5.php"
+}
+
+- HTTP ステータスは 200
+- blocked は遮断の理由を示す固定値
+- redirect は誘導先の Web 画面 URL</mark></code></pre>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="h2num">04</span>HTTP 200 で返している理由</h2>
+  <div class="note">
+    <h3>403 にすると、設定したメッセージが端末に届かないことがあります</h3>
+    <p>
+      Unity の <code>UnityWebRequest</code> をはじめ、多くの HTTP クライアントは 4xx を
+      「通信エラー」として扱い、レスポンスの中身を読まずに独自の文言を表示します。
+      それでは <code>appblock_msg</code> に設定した文章が画面に出ません。
+      <code>/api/</code> の失敗はもともと HTTP コードではなくエンベロープの
+      <code>ok:false</code> で表す仕様（<code>api/README.md</code>）なので、
+      200 と <code>ok:false</code> の組み合わせが一番確実にメッセージを届けられます。
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="h2num">05</span>動作確認</h2>
+  <p>
+    XAMPP の実サーバー（<code>http://localhost/</code>）に対して、実際のゆかナビと同じ
+    User-Agent を付けた <code>curl</code> で確認しました。確認後は <code>config.ini</code> を元に戻しています。
+  </p>
+  <ul class="checks">
+    <li>
+      <span class="ok">OK</span>
+      <span class="what">
+        <b>アプリ UA で /api/server_info.php → 遮断 JSON</b>
+        <em>{"ok":false,"error":"ゆかナビからのアクセスをオフにしています","blocked":"appblock","redirect":"…"}</em>
+      </span>
+    </li>
+    <li>
+      <span class="ok">OK</span>
+      <span class="what">
+        <b>通常のブラウザ UA → これまでどおり</b>
+        <em>{"ok":true,"data":{"app":"yukari","version":"v0.10.0-beta-111-g4689167-つぼはち改良",…}}</em>
+      </span>
+    </li>
+    <li>
+      <span class="ok">OK</span>
+      <span class="what">
+        <b>アプリ UA で /requestlist_only.php → 案内 HTML</b>
+        <em>meta refresh と location.replace の両方を出力し、Set-Cookie: YkariAppWebFallback=1 も付与</em>
+      </span>
+    </li>
+    <li>
+      <span class="ok">OK</span>
+      <span class="what">
+        <b>アプリ UA でもジャンプ先 search_bs5.php は素通り</b>
+        <em>110,773 バイトの通常ページが返り、無限ループしない</em>
+      </span>
+    </li>
+    <li>
+      <span class="ok">OK</span>
+      <span class="what">
+        <b>Cookie 付きの再アクセスは素通り</b>
+        <em>案内を見たあとは Web 版として通常どおり操作できる</em>
+      </span>
+    </li>
+    <li>
+      <span class="ok">OK</span>
+      <span class="what">
+        <b>appblock_web=0 で Web ページは素通り、/api/ は遮断</b>
+        <em>appblock_ua を書き換えると判定対象も追随することを確認</em>
+      </span>
+    </li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="h2num">06</span>使うときの注意</h2>
+  <div class="note">
+    <h3>User-Agent 判定なので、詐称すれば通せます</h3>
+    <p>
+      目的は「アプリ利用者を Web 版へ案内すること」であって、不正アクセスの防止ではありません。
+      確実に締め出したい場合は、Apache 側やファイアウォールでの制限を併用してください。
+      また <code>UnityPlayer</code> は Unity 製アプリ全般が送る文字列です。
+      ゆかナビだけを狙いたい場合は、アプリが専用の User-Agent を送るようになった時点で
+      <code>appblock_ua</code> をその文字列に絞ってください。
+    </p>
+  </div>
+</section>
+
+<footer>
+  branch: claude/appblock-yukanavi ／ base: codex/special-page-builder (v0.10.0-beta-111-g4689167)
+</footer>
+
+</div>
+
+</body>
+</html>
