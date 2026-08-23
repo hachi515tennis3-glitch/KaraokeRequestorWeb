@@ -2,6 +2,11 @@
 
 require_once 'kara_config.php';
 require_once 'prioritydb_func.php';
+require_once 'appblock_func.php';
+
+// ゆかナビ (モバイルアプリ) からのアクセス遮断。config.ini の appblock=1 のときだけ働く。
+// commonfunc.php は全ページ・全 API から読まれるため、ここに置けば一箇所で遮断できる。
+appblock_guard();
 
 date_default_timezone_set('Asia/Tokyo');
 

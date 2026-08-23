@@ -349,6 +349,9 @@ print '</pre>';
     <li class="menu">
      <a href="#googlesync" class="menulink" > Google同期設定 </a>
     </li>
+    <li class="menu">
+     <a href="#appblock_t" class="menulink" > アプリ接続（ゆかナビ） </a>
+    </li>
     </ul>
     <li class="menu">
      <a href="#backup" class="menulink" > 設定バックアップ </a>
@@ -2051,6 +2054,60 @@ if(array_key_exists("useeasyauth_word",$config_ini)) {
     <input type="text" name="google_relay_secret" class="form-control"
       value="<?php echo htmlspecialchars(urldecode($config_ini['google_relay_secret'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
       placeholder="中継サーバー管理者から入手したシークレット" />
+  </div>
+</div></div>
+
+<!---- アプリ接続設定（ゆかナビ） ----->
+<?php
+  $appblock_on     = ($config_ini['appblock'] ?? 0) == 1;
+  $appblock_web_on = ($config_ini['appblock_web'] ?? 1) == 1;
+?>
+<div class="card cfg-card mb-4"><div class="card-body">
+  <div class="mb-3">
+    <h3 id="appblock_t" class="radio form-label menulink"> アプリ接続設定（ゆかナビ） </h3>
+    <label class="form-label"><small>
+      モバイルアプリ「ゆかナビ」からのアクセスを遮断し、代わりにメッセージを端末へ返して
+      Web版の画面へ自動ジャンプさせます。ブラウザからの通常アクセスには影響しません。
+    </small></label>
+
+    <h4 class="radio form-label"> ゆかナビからのアクセス </h4>
+    <label class="radio-inline">
+      <input type="radio" name="appblock" value="0" <?php print $appblock_on ? '' : 'checked' ?> /> 許可する
+    </label>
+    <label class="radio-inline">
+      <input type="radio" name="appblock" value="1" <?php print $appblock_on ? 'checked' : '' ?> /> 遮断する
+    </label>
+
+    <h4 class="radio form-label"> Web画面へのアクセスも遮断する </h4>
+    <label class="form-label"><small>
+      遮断する：アプリ内ブラウザからのページ表示も案内ページに差し替えてジャンプさせます。<br>
+      遮断しない：/api/（アプリ専用API）だけを遮断します。
+    </small></label>
+    <label class="radio-inline">
+      <input type="radio" name="appblock_web" value="1" <?php print $appblock_web_on ? 'checked' : '' ?> /> 遮断する
+    </label>
+    <label class="radio-inline">
+      <input type="radio" name="appblock_web" value="0" <?php print $appblock_web_on ? '' : 'checked' ?> /> 遮断しない
+    </label>
+
+    <h4 class="form-label"> 端末に返すメッセージ </h4>
+    <input type="text" name="appblock_msg" class="form-control"
+      value="<?php echo htmlspecialchars(urldecode($config_ini['appblock_msg'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+      placeholder="ゆかナビからのアクセスをオフにしています" />
+
+    <h4 class="form-label"> 自動ジャンプ先URL </h4>
+    <input type="text" name="appblock_url" class="form-control"
+      value="<?php echo htmlspecialchars(urldecode($config_ini['appblock_url'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+      placeholder="http://ykr.moe:11059/search_bs5.php" />
+
+    <h4 class="form-label"> アプリ判定のUser-Agentパターン </h4>
+    <label class="form-label"><small>
+      正規表現です。縦棒（|）区切りで複数指定できます。ゆかナビはUnity製で、
+      <code>UnityPlayer/... (UnityWebRequest/...)</code> を送ります。
+    </small></label>
+    <input type="text" name="appblock_ua" class="form-control"
+      value="<?php echo htmlspecialchars(urldecode($config_ini['appblock_ua'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+      placeholder="UnityPlayer|YukaNavi" />
   </div>
 </div></div>
 

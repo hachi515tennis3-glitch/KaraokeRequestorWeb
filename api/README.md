@@ -47,6 +47,27 @@
 - 例外: `/api/server_info.php` のみ認証前に呼べる (接続設定画面用)
 - トークン認証は将来課題
 
+### アプリからのアクセス遮断 (appblock)
+
+サーバー側の設定 `appblock=1` (設定画面「アプリ接続設定（ゆかナビ）」) が有効なとき、
+User-Agent が `appblock_ua` のパターン (既定 `UnityPlayer|YukaNavi|ゆかナビ`) に一致する
+クライアントからの `/api/` 配下の呼び出しは、すべて次の応答に差し替えられる。
+
+```json
+{
+  "ok": false,
+  "error": "ゆかナビからのアクセスをオフにしています",
+  "blocked": "appblock",
+  "redirect": "http://ykr.moe:11059/search_bs5.php"
+}
+```
+
+- HTTP ステータスは **200**。4xx にするとクライアントによってはボディを読まずに
+  独自のエラー文言を出してしまい、`error` の文言が端末に届かないため
+- `blocked` は遮断の理由を示す固定値。通常のエラーと区別したい場合に使う
+- `redirect` は誘導先の Web 画面 URL。クライアントはこの URL へ遷移させるとよい
+- 実装は `appblock_func.php`
+
 ### nowplaying（再生状況）の値
 
 DB 上は日本語文字列。API 入力は数値も受理する（出力は日本語文字列のまま）。

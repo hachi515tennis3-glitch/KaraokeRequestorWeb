@@ -209,6 +209,24 @@ function readconfig_array()
         $config_ini = array_merge($config_ini,array("update_repo" => urlencode($update_repo)));
     }
 
+    // ==== ゆかナビ (モバイルアプリ) からのアクセス遮断 ====
+    // appblock=1 で有効。判定と応答は appblock_func.php を参照。
+    if(!array_key_exists("appblock", $config_ini)){
+        $config_ini = array_merge($config_ini,array("appblock" => 0));
+    }
+    if(!array_key_exists("appblock_web", $config_ini)){
+        $config_ini = array_merge($config_ini,array("appblock_web" => 1));
+    }
+    if(!array_key_exists("appblock_msg", $config_ini)){
+        $config_ini["appblock_msg"] = urlencode("ゆかナビからのアクセスをオフにしています");
+    }
+    if(!array_key_exists("appblock_url", $config_ini)){
+        $config_ini["appblock_url"] = urlencode("http://ykr.moe:11059/search_bs5.php");
+    }
+    if(!array_key_exists("appblock_ua", $config_ini)){
+        $config_ini["appblock_ua"] = urlencode("UnityPlayer|YukaNavi|ゆかナビ");
+    }
+
     if($config_ini["playerpath_select"] == urlencode("その他PATH指定" )) {
         $config_ini = array_merge($config_ini,array("playerpath" => ($config_ini["playerpath_any"])));
     }else{
