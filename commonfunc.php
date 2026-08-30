@@ -2022,6 +2022,32 @@ function print_bg_style_block($is_bs5 = false) {
     $vars[] = '--bg-overlay-alpha:' . $overlay_alpha . ';';
     $vars[] = '--bg-card-alpha:' . $card_alpha . ';';
 
+    // 背景画像の並べ方: cover = 画面全体に拡大 / tile = タイル状に繰り返し
+    $bg_tile = false;
+    if (array_key_exists("bg_image_mode", $config_ini)) {
+        $bg_tile = (strtolower(urldecode($config_ini["bg_image_mode"])) === 'tile');
+    }
+    // タイル1枚あたりの表示幅(px)。0 は画像の原寸で並べる。
+    $tile_size = 200;
+    if (array_key_exists("bg_tile_size", $config_ini)) {
+        $v = (int)$config_ini["bg_tile_size"];
+        if ($v < 0) $v = 0; if ($v > 600) $v = 600;
+        $tile_size = $v;
+    }
+    if ($has_bgimage) {
+        // 描画パラメータを CSS 変数として持たせる。html::before は疑似要素で JS から
+        // 直接スタイルを触れないため、init.php のライブプレビューはこの変数を差し替える。
+        if ($bg_tile) {
+            $vars[] = '--bg-image-repeat:repeat;';
+            $vars[] = '--bg-image-size:' . (($tile_size > 0) ? $tile_size . 'px auto' : 'auto') . ';';
+            $vars[] = '--bg-image-position:left top;';
+        } else {
+            $vars[] = '--bg-image-repeat:no-repeat;';
+            $vars[] = '--bg-image-size:cover;';
+            $vars[] = '--bg-image-position:center center;';
+        }
+    }
+
     print '<style>:root{' . implode('', $vars) . '}';
 
     if ($has_bgimage) {
@@ -2043,8 +2069,10 @@ function print_bg_style_block($is_bs5 = false) {
             . 'height:calc(100vh + 160px);'
             . 'height:calc(100lvh + 160px);'
             . 'z-index:-2;pointer-events:none;filter:none !important;'
-            . 'background-image:var(--bg-page-image);background-repeat:no-repeat;'
-            . 'background-size:cover;background-position:center center;'
+            . 'background-image:var(--bg-page-image);'
+            . 'background-repeat:var(--bg-image-repeat, no-repeat);'
+            . 'background-size:var(--bg-image-size, cover);'
+            . 'background-position:var(--bg-image-position, center center);'
             . 'transform:translate3d(0,0,0);-webkit-transform:translate3d(0,0,0);'
             . '-webkit-backface-visibility:hidden;backface-visibility:hidden;}';
         // スマホ縦持ち(縦長表示)のときだけ専用画像に切り替える。

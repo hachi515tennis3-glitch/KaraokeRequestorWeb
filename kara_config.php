@@ -206,6 +206,14 @@ function readconfig_array()
     if(!array_key_exists("bg_overlay_opacity", $config_ini)){
         $config_ini["bg_overlay_opacity"] = 100;
     }
+    // 背景画像の並べ方: "cover" = 画面全体に拡大 / "tile" = タイル状に繰り返し
+    if(!array_key_exists("bg_image_mode", $config_ini)){
+        $config_ini["bg_image_mode"] = "cover";
+    }
+    // タイル1枚あたりの表示幅(px)。0 は画像の原寸で並べる。
+    if(!array_key_exists("bg_tile_size", $config_ini)){
+        $config_ini["bg_tile_size"] = 200;
+    }
 
     // アップデート取得元リポジトリ（owner/repo 形式）。
     // 開発移譲などで取得元が変わった場合、config.ini でこの値を書き換えれば
