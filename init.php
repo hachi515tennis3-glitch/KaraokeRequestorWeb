@@ -250,7 +250,10 @@ foreach($newconfig as $key => $value){
     }
 }
 
-if(!empty($newconfig) ) $newconfig['roomurlshow'] = $new_roomurlshow ;
+/* roomurl を含むリクエスト(全設定フォーム)のときだけ再構築する。
+   含まないリクエスト(部分的なパラメータ送信)で無条件に上書きすると
+   既存の roomurlshow 設定が全消去されてしまう */
+if(!empty($newconfig) && array_key_exists('roomurl', $newconfig) ) $newconfig['roomurlshow'] = $new_roomurlshow ;
 
 // usev2ui（統合設定）を個別キーに展開
 if (isset($newconfig['usev2ui'])) {
