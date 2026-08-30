@@ -250,7 +250,10 @@ foreach($newconfig as $key => $value){
     }
 }
 
-if(!empty($newconfig) ) $newconfig['roomurlshow'] = $new_roomurlshow ;
+/* roomurl を含むリクエスト(全設定フォーム)のときだけ再構築する。
+   含まないリクエスト(部分的なパラメータ送信)で無条件に上書きすると
+   既存の roomurlshow 設定が全消去されてしまう */
+if(!empty($newconfig) && array_key_exists('roomurl', $newconfig) ) $newconfig['roomurlshow'] = $new_roomurlshow ;
 
 // usev2ui（統合設定）を個別キーに展開
 if (isset($newconfig['usev2ui'])) {
@@ -427,6 +430,13 @@ print '</pre>';
   <p>
     <a href ="online_update.php" class="btn btn-secondary" > オンラインアップデート画面 </a>
   </p>
+  <?php if (configbool("use_setlist_cool", false)): ?>
+  <h3>クール一覧データ同期</h3>
+  <p>
+    <button type="button" class="btn btn-secondary" id="setlistSyncBtn" onclick="sync_setlist_stats()">クール一覧を最新情報に同期</button>
+    <span id="setlistSyncStatus" class="small text-muted ms-2"></span>
+  </p>
+  <?php endif; ?>
 <script type="text/javascript">
 function start_yklistercmd(){
 var request = new XMLHttpRequest();
@@ -462,6 +472,32 @@ function storeAppLaunch(url, btnId, label) {
         }
     };
     request.send("");
+}
+
+function sync_setlist_stats(){
+    var btn = document.getElementById('setlistSyncBtn');
+    var status = document.getElementById('setlistSyncStatus');
+    if (btn) { btn.disabled = true; btn.textContent = '同期中...'; }
+    if (status) { status.textContent = '最新HTMLから取得しています...'; }
+
+    fetch('setlist_stats_sync.php', {method: 'POST', credentials: 'same-origin'})
+      .then(function(res) { return res.json().then(function(body) { return {ok: res.ok, body: body}; }); })
+      .then(function(result) {
+        var body = result.body || {};
+        if (!result.ok || !body.ok) {
+          throw new Error(body.error || body.warning || 'sync_failed');
+        }
+        if (status) {
+          var backend = body.search_backend === 'everything' ? 'Everything' : 'ゆかりすたー';
+          status.textContent = '同期しました: ' + (body.updated_at || '-') + ' / 検索先: ' + backend;
+        }
+      })
+      .catch(function(err) {
+        if (status) { status.textContent = '同期に失敗しました: ' + err.message; }
+      })
+      .finally(function() {
+        if (btn) { btn.disabled = false; btn.textContent = 'クール一覧を最新情報に同期'; }
+      });
 }
 
 function start_yklisterstore_cmd(){
@@ -1476,6 +1512,7 @@ foreach ($searchitem_defs as $idx => $def) {
 }
 asort($si_order_map);
 $si_sorted_indices = array_keys($si_order_map);
+$listerdb_index_default_collapsed = configbool("listerdb_index_default_collapsed", false);
 
 ?>
 
@@ -1492,6 +1529,17 @@ $si_sorted_indices = array_keys($si_order_map);
       <span class="searchitem-drag-handle" style="cursor:grab; color:var(--color-text-muted); font-size:20px; padding:0 10px 0 0; line-height:1; user-select:none; touch-action:none;">&#8942;</span>
       <input type="checkbox" name="searchitem[]" value="<?php echo $def['id']; ?>" <?php echo $checked; ?> style="margin-right:8px;">
       <span><?php echo $def['label']; ?></span>
+      <?php if ($def['id'] === 'listerDB'): ?>
+      <span style="margin-left:auto; display:inline-flex; align-items:center; gap:8px; font-size:0.9rem;">
+        <span class="text-muted">初期状態で閉じる</span>
+        <label class="radio-inline" style="margin-right:0;">
+          <input type="radio" name="listerdb_index_default_collapsed" value="1" <?php echo $listerdb_index_default_collapsed ? 'checked' : ''; ?>> オン
+        </label>
+        <label class="radio-inline" style="margin-right:0;">
+          <input type="radio" name="listerdb_index_default_collapsed" value="2" <?php echo !$listerdb_index_default_collapsed ? 'checked' : ''; ?>> オフ
+        </label>
+      </span>
+      <?php endif; ?>
       <input type="hidden" name="searchitem_o[<?php echo $idx; ?>]" value="<?php echo $si_sorted_pos + 1; ?>" class="searchitem-order-input">
     </div>
 <?php } ?>
@@ -1500,13 +1548,48 @@ $si_sorted_indices = array_keys($si_order_map);
 
   <div class="mb-3">
     <h4  > りすたーDBファイルパス  </h4>
-    <?php 
+    <?php
         $listerDBPATH = 'list\List.sqlite3';
         if(array_key_exists("listerDBPATH",$config_ini)) {
            $listerDBPATH = urldecode($config_ini["listerDBPATH"]);
         }
     ?>
     <input type="text" name="listerDBPATH" size="100" class="form-control" value="<?php echo $listerDBPATH; ?>" />
+  </div>
+
+  <div class="mb-3">
+    <?php
+        $use_setlist_cool = configbool("use_setlist_cool", false);
+        $setlist_search_backend = urldecode($config_ini['setlist_search_backend'] ?? 'listerdb');
+        if ($setlist_search_backend !== 'everything') {
+            $setlist_search_backend = 'listerdb';
+        }
+        $setlist_stats_url = '';
+        if(array_key_exists("setlist_stats_url",$config_ini)) {
+           $setlist_stats_url = urldecode($config_ini["setlist_stats_url"]);
+        }
+    ?>
+    <h4 class="radio form-label"> クール一覧タブ </h4>
+    <label class="form-label"><small>検索・予約タブに「クール一覧」(公開viewerのクール集計・ランキング)を表示します</small></label>
+    <label class="radio-inline">
+      <input type="radio" name="use_setlist_cool" value="1" <?php print ($use_setlist_cool) ? 'checked' : ' '; ?> /> 使用する
+    </label>
+    <label class="radio-inline">
+      <input type="radio" name="use_setlist_cool" value="2" <?php print (!$use_setlist_cool) ? 'checked' : ' '; ?> /> 使用しない
+    </label>
+    <div class="mt-2">
+      <label class="form-label mb-1"><small>クール一覧から開く検索先</small></label><br>
+      <label class="radio-inline">
+        <input type="radio" name="setlist_search_backend" value="listerdb" <?php print ($setlist_search_backend === 'listerdb') ? 'checked' : ' '; ?> /> ゆかりすたー
+      </label>
+      <label class="radio-inline">
+        <input type="radio" name="setlist_search_backend" value="everything" <?php print ($setlist_search_backend === 'everything') ? 'checked' : ' '; ?> /> Everything
+      </label>
+    </div>
+    <div class="mt-2">
+      <label class="form-label mb-1"><small>集計データ取得元URL (viewer.html)</small></label>
+      <input type="text" name="setlist_stats_url" size="100" class="form-control" value="<?php echo htmlspecialchars($setlist_stats_url, ENT_QUOTES, 'UTF-8'); ?>" />
+    </div>
   </div>
 
   <div class="mb-3">

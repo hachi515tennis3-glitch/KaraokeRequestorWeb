@@ -149,6 +149,18 @@ function readconfig_array()
     if(!array_key_exists("usenewrequestlist", $config_ini)){
         $config_ini = array_merge($config_ini,array("usenewrequestlist" => 1));
     }
+    if(!array_key_exists("listerdb_index_default_collapsed", $config_ini)){
+        $config_ini["listerdb_index_default_collapsed"] = 2;
+    }
+    if(!array_key_exists("use_setlist_cool", $config_ini)){
+        $config_ini["use_setlist_cool"] = 2;
+    }
+    if(!array_key_exists("setlist_search_backend", $config_ini)){
+        $config_ini["setlist_search_backend"] = urlencode("listerdb");
+    }
+    if(!array_key_exists("setlist_stats_url", $config_ini)){
+        $config_ini["setlist_stats_url"] = urlencode("https://hachi515.github.io/karaoke_setlist/viewer.html");
+    }
     if(!array_key_exists("ui_skin_preset", $config_ini)){
         $config_ini["ui_skin_preset"] = urlencode("default");
     }
