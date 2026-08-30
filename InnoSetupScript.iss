@@ -1,9 +1,19 @@
 ; -- InnoSetupScript.iss --
 ; KaraokeRequestorWeb インストーラースクリプト
 
+; --- バージョン ---
+; バージョンの記載場所は「version」ファイル1箇所のみ。
+; アプリ本体（オンラインアップデート画面の現在バージョン表示）もこのファイルを参照するため、
+; バージョンを上げるときは version ファイルだけを書き換えればよい。
+#define VerHandle FileOpen("version")
+#define RawVersion FileRead(VerHandle)
+#expr FileClose(VerHandle)
+; version ファイルは "v0.10.1" 形式。先頭の "v" を除いたものをインストーラー用に使う
+#define AppVer (Copy(RawVersion, 1, 1) == "v") ? Copy(RawVersion, 2) : RawVersion
+
 [Setup]
 AppName=「ゆかり」Universal KAraoke REquest Web tool
-AppVersion=0.10.1
+AppVersion={#AppVer}
 DefaultDirName=C:\xampp\htdocs
 UsePreviousAppDir=yes
 AppendDefaultDirName=no
@@ -12,7 +22,7 @@ Compression=lzma2
 SolidCompression=yes
 OutputDir=userdocs:Inno Setup Examples Output
 SetupIconFile=ykr.ico
-OutputBaseFilename=KaraokeRequestorWebSetup
+OutputBaseFilename=KaraokeRequestorWebSetup-{#AppVer}
 AppPublisher=KaraokeRequestorWeb
 AppPublisherURL=https://github.com/bee7813993/KaraokeRequestorWeb
 
