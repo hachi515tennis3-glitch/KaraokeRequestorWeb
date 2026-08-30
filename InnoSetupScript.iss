@@ -3,7 +3,7 @@
 
 [Setup]
 AppName=「ゆかり」Universal KAraoke REquest Web tool
-AppVersion=0.10.0-beta
+AppVersion=0.10.1
 DefaultDirName=C:\xampp\htdocs
 UsePreviousAppDir=yes
 AppendDefaultDirName=no
@@ -44,6 +44,7 @@ Source: "search_sort_priority_auth.json"; DestDir: "{app}"; Flags: onlyifdoesnte
 Source: "limitlist_sample.json"; DestDir: "{app}"; Flags: IgnoreVersion; Components: main
 
 ; --- サブディレクトリ ---
+Source: "api\*"; DestDir: "{app}\api"; Flags: IgnoreVersion recursesubdirs createallsubdirs; Components: main
 Source: "css\*"; DestDir: "{app}\css"; Flags: IgnoreVersion recursesubdirs createallsubdirs; Components: main
 Source: "js\*"; DestDir: "{app}\js"; Flags: IgnoreVersion recursesubdirs createallsubdirs; Components: main
 Source: "images\*"; DestDir: "{app}\images"; Excludes: "\マスコット\*"; Flags: IgnoreVersion recursesubdirs createallsubdirs; Components: main
