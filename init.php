@@ -1607,7 +1607,7 @@ foreach ($searchitem_defs as $idx => $def) {
 }
 asort($si_order_map);
 $si_sorted_indices = array_keys($si_order_map);
-$listerdb_index_default_collapsed = configbool("listerdb_index_default_collapsed", false);
+$listerdb_index_default_collapsed = configbool("listerdb_index_default_collapsed", true);
 
 ?>
 

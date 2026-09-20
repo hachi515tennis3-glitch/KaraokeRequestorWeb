@@ -277,6 +277,10 @@ body {
   padding: 8px;
 }
 
+#volume-slider {
+  min-width: 0;
+}
+
 /* ボリューム数値表示 */
 .player-vol-display {
   font-family: 'Courier New', Courier, monospace;

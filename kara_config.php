@@ -150,7 +150,7 @@ function readconfig_array()
         $config_ini = array_merge($config_ini,array("usenewrequestlist" => 1));
     }
     if(!array_key_exists("listerdb_index_default_collapsed", $config_ini)){
-        $config_ini["listerdb_index_default_collapsed"] = 2;
+        $config_ini["listerdb_index_default_collapsed"] = 1;
     }
     if(!array_key_exists("use_setlist_cool", $config_ini)){
         $config_ini["use_setlist_cool"] = 2;

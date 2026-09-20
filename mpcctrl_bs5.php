@@ -311,14 +311,16 @@ $playpause_cls  = ($state_num == 2) ? 'player-btn-playpause' : 'btn-outline-prim
     <!-- スライダー行 -->
     <div class="d-flex align-items-center gap-2 mb-2">
       <button class="btn btn-outline-primary player-btn flex-shrink-0 player-vol-btn"
-              onclick="vol_btn_down()" aria-label="ボリュームDOWN">
+              onclick="vol_btn_down()" aria-label="音量ダウン">
         <?= $ic_vol_d ?>
+        <span class="small text-nowrap">音量ダウン</span>
       </button>
       <input type="range" class="form-range flex-grow-1" id="volume-slider"
              min="0" max="100" value="50" aria-label="ボリューム">
       <button class="btn btn-outline-primary player-btn flex-shrink-0 player-vol-btn"
-              onclick="vol_btn_up()" aria-label="ボリュームUP">
+              onclick="vol_btn_up()" aria-label="音量アップ">
         <?= $ic_vol_u ?>
+        <span class="small text-nowrap">音量アップ</span>
       </button>
       <span class="player-vol-display" id="vol-display" aria-live="polite">－</span>
     </div>
