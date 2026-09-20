@@ -5,6 +5,11 @@ require_once 'easyauth_class.php';
 $easyauth = new EasyAuth();
 $easyauth->do_eashauthcheck();
 
+if (!configbool("use_setlist_cool", false)) {
+    header('Location: search_bs5.php');
+    exit;
+}
+
 $selectid = '';
 if (array_key_exists('id', $_REQUEST)) $selectid = $_REQUEST['id'];
 if (array_key_exists('selectid', $_REQUEST)) $selectid = $_REQUEST['selectid'];
@@ -23,7 +28,7 @@ if (array_key_exists('selectid', $_REQUEST)) $selectid = $_REQUEST['selectid'];
 <?php echo build_reservation_tabs($selectid, 'setlist'); ?>
 
   <section class="setlist-hero" aria-label="ゆかりすたー検索">
-    <form id="setlistSearchForm" class="setlist-search" action="search_listerdb_filelist.php" method="get">
+    <form id="setlistSearchForm" class="setlist-search" action="search_listerdb_filelist_bs5.php" method="get">
       <?php if ($selectid !== ''): ?>
       <input type="hidden" name="selectid" value="<?php echo htmlspecialchars($selectid, ENT_QUOTES, 'UTF-8'); ?>">
       <?php endif; ?>

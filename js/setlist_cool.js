@@ -53,7 +53,7 @@
       return 'search_bs5.php?' + query(params);
     }
     params.anyword = word;
-    return 'search_listerdb_filelist.php?' + query(params);
+    return 'search_listerdb_filelist_bs5.php?' + query(params);
   }
 
   function matchesText(text) {
@@ -271,9 +271,9 @@
     render();
   }
 
-  function load(refresh) {
+  function load() {
     if (statusEl) statusEl.textContent = '読み込み中...';
-    fetch(endpoint + (refresh ? '?refresh=1' : ''), {credentials: 'same-origin'})
+    fetch(endpoint, {credentials: 'same-origin'})
       .then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
@@ -341,10 +341,10 @@
       if (name === 'program_name') {
         searchForm.setAttribute('action', 'search_listerdb_songlist_bs5.php');
       } else {
-        searchForm.setAttribute('action', 'search_listerdb_filelist.php');
+        searchForm.setAttribute('action', 'search_listerdb_filelist_bs5.php');
       }
     });
   }
 
-  load(false);
+  load();
 })();

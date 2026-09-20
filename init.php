@@ -148,6 +148,10 @@ if(array_key_exists("clearauth", $_REQUEST)) {
   position: absolute; top: 0; left: 0;
   max-width: none; user-select: none; -webkit-user-drag: none; pointer-events: none;
 }
+/* 背景画像の並べ方(拡大 / タイル)による表示切り替え */
+.bg-tile-only { display: none; }
+#bgimage_section.bg-mode-tile .bg-tile-only { display: block; }
+#bgimage_section.bg-mode-tile .bgimg-aspect-hint { display: none; }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -250,7 +254,10 @@ foreach($newconfig as $key => $value){
     }
 }
 
-if(!empty($newconfig) ) $newconfig['roomurlshow'] = $new_roomurlshow ;
+/* roomurl を含むリクエスト(全設定フォーム)のときだけ再構築する。
+   含まないリクエスト(部分的なパラメータ送信)で無条件に上書きすると
+   既存の roomurlshow 設定が全消去されてしまう */
+if(!empty($newconfig) && array_key_exists('roomurl', $newconfig) ) $newconfig['roomurlshow'] = $new_roomurlshow ;
 
 // usev2ui（統合設定）を個別キーに展開
 if (isset($newconfig['usev2ui'])) {
@@ -435,29 +442,13 @@ print '</pre>';
   <p>
     <a href ="online_update.php" class="btn btn-secondary" > オンラインアップデート画面 </a>
   </p>
+  <?php if (configbool("use_setlist_cool", false)): ?>
   <h3>クール一覧データ同期</h3>
-  <?php
-    $setlist_search_backend = urldecode($config_ini['setlist_search_backend'] ?? 'listerdb');
-    if ($setlist_search_backend !== 'everything') {
-        $setlist_search_backend = 'listerdb';
-    }
-    $setlist_search_backend_label = ($setlist_search_backend === 'everything') ? 'Everything' : 'ゆかりすたー';
-  ?>
   <p>
     <button type="button" class="btn btn-secondary" id="setlistSyncBtn" onclick="sync_setlist_stats()">クール一覧を最新情報に同期</button>
-    <span class="small text-muted ms-2">検索先: <?php echo htmlspecialchars($setlist_search_backend_label, ENT_QUOTES, 'UTF-8'); ?></span>
     <span id="setlistSyncStatus" class="small text-muted ms-2"></span>
   </p>
-  <form method="post" action="init.php" class="d-flex flex-wrap align-items-center gap-2 mb-3">
-    <span class="small text-muted">クール一覧から開く検索先</span>
-    <label class="radio-inline mb-0">
-      <input type="radio" name="setlist_search_backend" value="listerdb" <?php print ($setlist_search_backend === 'listerdb') ? 'checked' : ' '; ?> /> ゆかりすたー
-    </label>
-    <label class="radio-inline mb-0">
-      <input type="radio" name="setlist_search_backend" value="everything" <?php print ($setlist_search_backend === 'everything') ? 'checked' : ' '; ?> /> Everything
-    </label>
-    <button type="submit" class="btn btn-outline-secondary btn-sm">検索先を保存</button>
-  </form>
+  <?php endif; ?>
 <script type="text/javascript">
 function start_yklistercmd(){
 var request = new XMLHttpRequest();
@@ -973,28 +964,55 @@ print ' value="10" ';
       if (array_key_exists("bg_overlay_opacity", $config_ini)) {
           $bg_overlay_opacity = (int)$config_ini["bg_overlay_opacity"];
       }
+      $bg_image_mode = 'cover';
+      if (array_key_exists("bg_image_mode", $config_ini)) {
+          if (strtolower(urldecode($config_ini["bg_image_mode"])) === 'tile') { $bg_image_mode = 'tile'; }
+      }
+      $bg_tile_size = 200;
+      if (array_key_exists("bg_tile_size", $config_ini)) {
+          $bg_tile_size = (int)$config_ini["bg_tile_size"];
+          if ($bg_tile_size < 0) $bg_tile_size = 0;
+          if ($bg_tile_size > 600) $bg_tile_size = 600;
+      }
   ?>
 
 <div class="card cfg-card mb-4"><div class="card-body">
-  <div class="mb-3">
+  <div class="mb-3<?php echo ($bg_image_mode === 'tile') ? ' bg-mode-tile' : ''; ?>" id="bgimage_section">
     <h3 id="bgimage_t" class="radio form-label menulink"> 背景画像 </h3>
-    <label><small>画面全体の背景に画像を表示します。PC(横長)とスマホ(縦長)で別々の画像を登録でき、アップロード時に切り抜き範囲を調整できます。スマホ用が未設定のときはPC用画像が使われます。</small></label>
+    <label><small>画面全体の背景に画像を表示します。PC(横長)とスマホ(縦長)で別々の画像を登録でき、拡大表示のときはアップロード時に切り抜き範囲を調整できます。スマホ用が未設定のときはPC用画像が使われます。</small></label>
     <?php if (!empty($bgimage_upload_msg)) { ?>
       <div class="alert alert-info" style="margin-top:6px;"><?php echo htmlspecialchars($bgimage_upload_msg, ENT_QUOTES, 'UTF-8'); ?></div>
     <?php } ?>
+
+    <div class="mb-3">
+      <label class="form-label"><small>画像の並べ方</small></label>
+      <label class="radio-inline">
+        <input type="radio" name="bg_image_mode" value="cover" <?php print ($bg_image_mode === 'cover') ? 'checked' : ' '; ?> /> 画面全体に拡大
+      </label>
+      <label class="radio-inline">
+        <input type="radio" name="bg_image_mode" value="tile" <?php print ($bg_image_mode === 'tile') ? 'checked' : ' '; ?> /> タイル状に並べる
+      </label>
+      <small>タイル状では画像を切り抜かず、そのまま繰り返して敷き詰めます。壁紙パターンやロゴ向けです。</small>
+    </div>
+
+    <div class="mb-3 bg-tile-only">
+      <label for="bg_tile_size"><small>タイルの大きさ: <span id="bg_tile_size_val"><?php echo $bg_tile_size; ?></span></small></label>
+      <input type="range" name="bg_tile_size" id="bg_tile_size" min="0" max="600" step="10" value="<?php echo $bg_tile_size; ?>" />
+      <small>タイル1枚あたりの表示幅です。0 にすると画像の原寸で並べます。</small>
+    </div>
 
     <div class="row">
       <?php
         // PC用・スマホ用の2ブロックを共通テンプレートで描画
         $bg_blocks = [
-            ['target' => 'pc',     'aspect' => 16/9, 'title' => 'PC用背景画像 (横長)',  'path' => $bgimage_path,        'field' => 'bgimage'],
-            ['target' => 'mobile', 'aspect' => 9/16, 'title' => 'スマホ用背景画像 (縦長)', 'path' => $bgimage_mobile_path, 'field' => 'bgimage_mobile'],
+            ['target' => 'pc',     'aspect' => 16/9, 'title' => 'PC用背景画像',  'hint' => ' (横長)', 'path' => $bgimage_path,        'field' => 'bgimage'],
+            ['target' => 'mobile', 'aspect' => 9/16, 'title' => 'スマホ用背景画像', 'hint' => ' (縦長)', 'path' => $bgimage_mobile_path, 'field' => 'bgimage_mobile'],
         ];
         foreach ($bg_blocks as $blk):
           $cur = htmlspecialchars($blk['path'], ENT_QUOTES, 'UTF-8');
       ?>
       <div class="col-md-6 mb-3 bgimg-block" data-target="<?php echo $blk['target']; ?>" data-aspect="<?php echo round($blk['aspect'], 4); ?>">
-        <h4 style="font-size:1rem;font-weight:600;"><?php echo htmlspecialchars($blk['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
+        <h4 style="font-size:1rem;font-weight:600;"><?php echo htmlspecialchars($blk['title'], ENT_QUOTES, 'UTF-8'); ?><span class="bgimg-aspect-hint"><?php echo htmlspecialchars($blk['hint'], ENT_QUOTES, 'UTF-8'); ?></span></h4>
         <?php if (!empty($blk['path'])) { ?>
           <div class="bgimg-current" style="margin:4px 0;">
             <small>現在: <code><?php echo $cur; ?></code></small><br>
@@ -1073,6 +1091,36 @@ print ' value="10" ';
           document.getElementById(id).addEventListener('change', updateBgPreview);
       });
       updateBgPreview();
+
+      // 並べ方(拡大 / タイル)とタイルサイズのライブプレビュー。
+      // 背景画像は html::before(疑似要素)に描かれ JS から直接触れないため、
+      // commonfunc.php が出力した CSS 変数を差し替えて反映させる。
+      var bgSection = document.getElementById('bgimage_section');
+      var tileSize  = document.getElementById('bg_tile_size');
+      function updateBgLayout(){
+          var checked = document.querySelector('input[name="bg_image_mode"]:checked');
+          var isTile  = !!(checked && checked.value === 'tile');
+          var size    = parseInt(tileSize.value, 10) || 0;
+          var st = document.documentElement.style;
+          st.setProperty('--bg-image-repeat',   isTile ? 'repeat' : 'no-repeat');
+          st.setProperty('--bg-image-size',     isTile ? (size > 0 ? size + 'px auto' : 'auto') : 'cover');
+          st.setProperty('--bg-image-position', isTile ? 'left top' : 'center center');
+          document.getElementById('bg_tile_size_val').textContent = (size > 0) ? (size + 'px') : '原寸';
+          if (bgSection) bgSection.classList.toggle('bg-mode-tile', isTile);
+      }
+      function onBgModeChange(){
+          updateBgLayout();
+          // 並べ方で切り抜きの要否が変わるため、選択済みの画像があれば読み直す。
+          document.querySelectorAll('.bgimg-block').forEach(function(b){
+              if (typeof b.__ykrBgReload === 'function') b.__ykrBgReload();
+          });
+      }
+      document.querySelectorAll('input[name="bg_image_mode"]').forEach(function(el){
+          el.addEventListener('change', onBgModeChange);
+      });
+      tileSize.addEventListener('input',  updateBgLayout);
+      tileSize.addEventListener('change', updateBgLayout);
+      updateBgLayout();
   })();
   </script>
 
@@ -1093,6 +1141,7 @@ print ' value="10" ';
           var resultBox = block.querySelector('.bgimg-result');
           var resultImg = resultBox ? resultBox.querySelector('img') : null;
           var deleteChk = block.querySelector('.bgimg-delete');
+          var section   = document.getElementById('bgimage_section');
 
           var natW = 0, natH = 0, minScale = 1, scale = 1, offX = 0, offY = 0;
           var vw = 0, vh = 0, dragging = false, lastX = 0, lastY = 0, objUrl = null;
@@ -1110,15 +1159,42 @@ print ' value="10" ';
               imgEl.style.left   = offX + 'px';
               imgEl.style.top    = offY + 'px';
           }
-          fileInput.addEventListener('change', function(){
+          function isTileMode(){
+              return !!(section && section.classList.contains('bg-mode-tile'));
+          }
+          function applyResult(data){
+              dataInput.value = data;
+              if (resultImg) resultImg.src = data;
+              if (resultBox) resultBox.hidden = false;
+              cropWrap.hidden = true;
+              if (deleteChk) deleteChk.checked = false; // 新規画像を設定したのでクリアは解除
+          }
+          // タイル表示では切り抜かず、選んだ画像をそのまま(長辺 1024px まで縮小して)使う。
+          // 固定アスペクト比で切り抜くとパターンの継ぎ目が合わなくなるため。
+          function useAsTile(file, im){
+              var ratio = Math.min(1, 1024 / Math.max(natW, natH));
+              var outW  = Math.max(1, Math.round(natW * ratio));
+              var outH  = Math.max(1, Math.round(natH * ratio));
+              var c = document.createElement('canvas');
+              c.width = outW; c.height = outH;
+              c.getContext('2d').drawImage(im, 0, 0, outW, outH);
+              // PNG は透過を保ちたいので PNG のまま書き出す
+              var isPng = /^image\/png$/i.test(file.type);
+              applyResult(c.toDataURL(isPng ? 'image/png' : 'image/jpeg', 0.85));
+          }
+          function handleFile(){
               var f = fileInput.files && fileInput.files[0];
               if (!f) return;
               if (!/^image\//.test(f.type)) { alert('画像ファイルを選択してください'); return; }
+              // 並べ方を切り替えたときは前回の結果を破棄してから処理し直す
+              dataInput.value = '';
+              if (resultBox) resultBox.hidden = true;
               if (objUrl) URL.revokeObjectURL(objUrl);
               objUrl = URL.createObjectURL(f);
               var im = new Image();
               im.onload = function(){
                   natW = im.naturalWidth; natH = im.naturalHeight;
+                  if (isTileMode()) { useAsTile(f, im); return; }
                   imgEl.src = objUrl;
                   cropWrap.hidden = false; // 計測前に表示しないと幅が 0 になる
                   vw = viewport.clientWidth; vh = viewport.clientHeight;
@@ -1130,7 +1206,10 @@ print ' value="10" ';
                   clamp(); render();
               };
               im.src = objUrl;
-          });
+          }
+          fileInput.addEventListener('change', handleFile);
+          // 並べ方ラジオの変更時に呼び出して再処理するためのフック
+          block.__ykrBgReload = handleFile;
           zoom.addEventListener('input', function(){
               var cx = (vw / 2 - offX) / scale, cy = (vh / 2 - offY) / scale;
               scale = minScale * parseFloat(zoom.value);
@@ -1165,12 +1244,7 @@ print ' value="10" ';
               var c = document.createElement('canvas');
               c.width = outW; c.height = outH;
               c.getContext('2d').drawImage(imgEl, sx, sy, sw, sh, 0, 0, outW, outH);
-              var data = c.toDataURL('image/jpeg', 0.85);
-              dataInput.value = data;
-              if (resultImg) resultImg.src = data;
-              if (resultBox) resultBox.hidden = false;
-              cropWrap.hidden = true;
-              if (deleteChk) deleteChk.checked = false; // 新規画像を設定したのでクリアは解除
+              applyResult(c.toDataURL('image/jpeg', 0.85));
           });
       }
       document.querySelectorAll('.bgimg-block').forEach(initCropper);
@@ -1576,6 +1650,41 @@ $listerdb_index_default_collapsed = configbool("listerdb_index_default_collapsed
         }
     ?>
     <input type="text" name="listerDBPATH" size="100" class="form-control" value="<?php echo $listerDBPATH; ?>" />
+  </div>
+
+  <div class="mb-3">
+    <?php
+        $use_setlist_cool = configbool("use_setlist_cool", false);
+        $setlist_search_backend = urldecode($config_ini['setlist_search_backend'] ?? 'listerdb');
+        if ($setlist_search_backend !== 'everything') {
+            $setlist_search_backend = 'listerdb';
+        }
+        $setlist_stats_url = '';
+        if(array_key_exists("setlist_stats_url",$config_ini)) {
+           $setlist_stats_url = urldecode($config_ini["setlist_stats_url"]);
+        }
+    ?>
+    <h4 class="radio form-label"> クール一覧タブ </h4>
+    <label class="form-label"><small>検索・予約タブに「クール一覧」(公開viewerのクール集計・ランキング)を表示します</small></label>
+    <label class="radio-inline">
+      <input type="radio" name="use_setlist_cool" value="1" <?php print ($use_setlist_cool) ? 'checked' : ' '; ?> /> 使用する
+    </label>
+    <label class="radio-inline">
+      <input type="radio" name="use_setlist_cool" value="2" <?php print (!$use_setlist_cool) ? 'checked' : ' '; ?> /> 使用しない
+    </label>
+    <div class="mt-2">
+      <label class="form-label mb-1"><small>クール一覧から開く検索先</small></label><br>
+      <label class="radio-inline">
+        <input type="radio" name="setlist_search_backend" value="listerdb" <?php print ($setlist_search_backend === 'listerdb') ? 'checked' : ' '; ?> /> ゆかりすたー
+      </label>
+      <label class="radio-inline">
+        <input type="radio" name="setlist_search_backend" value="everything" <?php print ($setlist_search_backend === 'everything') ? 'checked' : ' '; ?> /> Everything
+      </label>
+    </div>
+    <div class="mt-2">
+      <label class="form-label mb-1"><small>集計データ取得元URL (viewer.html)</small></label>
+      <input type="text" name="setlist_stats_url" size="100" class="form-control" value="<?php echo htmlspecialchars($setlist_stats_url, ENT_QUOTES, 'UTF-8'); ?>" />
+    </div>
   </div>
 
   <div class="mb-3">

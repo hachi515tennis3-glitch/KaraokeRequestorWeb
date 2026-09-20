@@ -533,8 +533,9 @@ else:
                     break;
                 case 1:
                     if (checkbox_check($config_ini['searchitem'], "listerDB")) {
+                        // 作品名インデックス検索は既定では従来どおり常時開き、設定で初期折りたたみにできる
                         $listerdb_default_open = !configbool("listerdb_index_default_collapsed", false);
-                        _section_open('sec-listerdb', '作品名インデックス検索', $listerdb_default_open ? $first : false);
+                        _section_open('sec-listerdb', '作品名インデックス検索', $listerdb_default_open);
                         print_listerdb_search();
                         _section_close();
                         $first = false;

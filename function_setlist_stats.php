@@ -202,7 +202,9 @@ function setlist_stats_get_data($force_refresh = false)
         return $data;
     }
 
-    $html = file_get_html_with_retry($source_url, 2, 20);
+    /* viewer.html は数MB規模。ページ表示を長時間ブロックしないようタイムアウトは短めにし、
+       失敗時は下のキャッシュフォールバックに任せる */
+    $html = file_get_html_with_retry($source_url, 2, 10);
     if ($html === false || $html === '') {
         $cached = setlist_stats_load_cache(0);
         if (is_array($cached)) {

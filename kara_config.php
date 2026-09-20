@@ -152,8 +152,14 @@ function readconfig_array()
     if(!array_key_exists("listerdb_index_default_collapsed", $config_ini)){
         $config_ini["listerdb_index_default_collapsed"] = 2;
     }
+    if(!array_key_exists("use_setlist_cool", $config_ini)){
+        $config_ini["use_setlist_cool"] = 2;
+    }
     if(!array_key_exists("setlist_search_backend", $config_ini)){
         $config_ini["setlist_search_backend"] = urlencode("listerdb");
+    }
+    if(!array_key_exists("setlist_stats_url", $config_ini)){
+        $config_ini["setlist_stats_url"] = urlencode("https://hachi515.github.io/karaoke_setlist/viewer.html");
     }
     if(!array_key_exists("ui_skin_preset", $config_ini)){
         $config_ini["ui_skin_preset"] = urlencode("default");
@@ -199,6 +205,14 @@ function readconfig_array()
     }
     if(!array_key_exists("bg_overlay_opacity", $config_ini)){
         $config_ini["bg_overlay_opacity"] = 100;
+    }
+    // 背景画像の並べ方: "cover" = 画面全体に拡大 / "tile" = タイル状に繰り返し
+    if(!array_key_exists("bg_image_mode", $config_ini)){
+        $config_ini["bg_image_mode"] = "cover";
+    }
+    // タイル1枚あたりの表示幅(px)。0 は画像の原寸で並べる。
+    if(!array_key_exists("bg_tile_size", $config_ini)){
+        $config_ini["bg_tile_size"] = 200;
     }
 
     // アップデート取得元リポジトリ（owner/repo 形式）。

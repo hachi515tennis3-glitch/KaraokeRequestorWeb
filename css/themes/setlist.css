@@ -8,7 +8,8 @@
 .setlist-card,
 .setlist-rank-row,
 .setlist-empty {
-  background: var(--bg-card);
+  /* 背景画像・外観プリセットのカード透過度に追従させるため --bg-card 直指定にしない */
+  background: rgba(var(--bg-card-rgb, 255, 255, 255), calc(var(--bg-card-alpha, 1) * var(--ykr-skin-card-opacity, 1)));
   border: 1px solid var(--color-border);
   border-radius: 14px;
   box-shadow: var(--shadow-card);

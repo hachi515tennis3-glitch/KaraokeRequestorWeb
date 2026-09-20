@@ -1,7 +1,6 @@
 <?php
 require_once 'commonfunc.php';
 require_once 'configauth_class.php';
-require_once 'easyauth_class.php';
 require_once 'function_setlist_stats.php';
 
 $configauth = new ConfigAuth();
@@ -13,8 +12,12 @@ if (!isset($_SERVER['PHP_AUTH_USER']) || $_SERVER['PHP_AUTH_USER'] !== 'admin' |
     exit;
 }
 
-$easyauth = new EasyAuth();
-$easyauth->do_eashauthcheck();
+if (!configbool("use_setlist_cool", false)) {
+    header('Content-Type: application/json; charset=UTF-8');
+    http_response_code(404);
+    echo json_encode(['ok' => false, 'error' => 'setlist_cool_disabled'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Content-Type: application/json; charset=UTF-8');
