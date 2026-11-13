@@ -221,6 +221,7 @@ function print_listerdb_fileonly() {
     print '    </div>';
     print      $sid_field;
     print '  </form>';
+    print_agelimit_optin_check();
     print '</div>';
 }
 
@@ -532,8 +533,9 @@ else:
                     break;
                 case 1:
                     if (checkbox_check($config_ini['searchitem'], "listerDB")) {
-                        // 作品名インデックス検索は常時開いた状態にする
-                        _section_open('sec-listerdb', '作品名インデックス検索', true);
+                        // 作品名インデックス検索は既定で折りたたみ、設定で初期展開にできる
+                        $listerdb_default_open = !configbool("listerdb_index_default_collapsed", true);
+                        _section_open('sec-listerdb', '作品名インデックス検索', $listerdb_default_open);
                         print_listerdb_search();
                         _section_close();
                         $first = false;

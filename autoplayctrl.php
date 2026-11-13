@@ -21,8 +21,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_online_debug') {
     // host:port を分割
     $host_parts = explode(':', $host_raw, 2);
     $h_host = $host_parts[0];
-    $h_port = isset($host_parts[1]) ? (int)$host_parts[1] : 80;
-    $http_url = 'http://' . $host_raw;
+    $h_port = isset($host_parts[1]) ? (int)$host_parts[1] : (configbool('globalhttps', false) ? 443 : 80);
+    $http_url = globalhost_scheme() . $host_raw;
     $timeout  = 8;
 
     $results = [];
@@ -60,11 +60,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_online_debug') {
     curl_exec($ch);
     $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $ip   = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
-    $en   = curl_errno($ch); $es2  = curl_strerror($en);
+    $en   = curl_errno($ch);
     curl_close($ch);
-    $results['curl_auto'] = $code > 0
-        ? "OK HTTP {$code} (接続先IP: {$ip})"
-        : "NG curl({$en}): {$es2}";
+    $results['curl_auto'] = online_check_result_text($code, $ip, $en);
 
     // 6. curl: IPv4 強制
     $ch = curl_init($http_url);
@@ -78,11 +76,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_online_debug') {
     curl_exec($ch);
     $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $ip   = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
-    $en   = curl_errno($ch); $es2  = curl_strerror($en);
+    $en   = curl_errno($ch);
     curl_close($ch);
-    $results['curl_v4'] = $code > 0
-        ? "OK HTTP {$code} (接続先IP: {$ip})"
-        : "NG curl({$en}): {$es2}";
+    $results['curl_v4'] = online_check_result_text($code, $ip, $en);
 
     // 7. curl: IPv6 強制
     $ch = curl_init($http_url);
@@ -96,17 +92,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_online_debug') {
     curl_exec($ch);
     $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $ip   = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
-    $en   = curl_errno($ch); $es2  = curl_strerror($en);
+    $en   = curl_errno($ch);
     curl_close($ch);
-    $results['curl_v6'] = $code > 0
-        ? "OK HTTP {$code} (接続先IP: {$ip})"
-        : "NG curl({$en}): {$es2}";
+    $results['curl_v6'] = online_check_result_text($code, $ip, $en);
 
     // 8. ping パケットロス率 (Windows 環境)
     // ロケールを英語に設定して ping を実行（出力を統一）
     $timeout_ms = $timeout * 1000;
     $ping_cmd = "cmd /c \"chcp 437 >nul && ping -n 4 -w {$timeout_ms} {$h_host}\"";
-    @exec($ping_cmd, $ping_output);
+    // ホスト部はそのままコマンドラインに入るので、IP アドレスかホスト名の形のときだけ実行する
+    $ping_host_ok = filter_var($h_host, FILTER_VALIDATE_IP) !== false
+        || filter_var($h_host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
+    $ping_output = [];
+    if ($ping_host_ok) @exec($ping_cmd, $ping_output);
     $ping_output_str = implode("\n", $ping_output);
     // 英語出力: "Packets: Sent = 4, Received = 3, Lost = 1 (25% loss)"
     if (preg_match('/Sent\s*=\s*(\d+).*Received\s*=\s*(\d+)/', $ping_output_str, $m)) {
@@ -114,6 +112,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_online_debug') {
         $recv = (int)$m[2];
         $loss = $sent > 0 ? (int)(($sent - $recv) / $sent * 100) : 100;
         $results['ping_loss'] = "Loss {$loss}% ({$sent}回送信)";
+    } elseif (!$ping_host_ok) {
+        $results['ping_loss'] = "スキップ(ホスト名の形式が不正)";
     } else {
         $results['ping_loss'] = "実行失敗";
     }
@@ -141,7 +141,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_online') {
     }
 
     $host      = urldecode($config_ini['globalhost']);
-    $check_url = 'http://' . $host;
+    $check_url = globalhost_scheme() . $host;
     $timeout   = (int)(array_key_exists('onlinechecktimeout', $config_ini) ? $config_ini['onlinechecktimeout'] : 5);
     if ($timeout < 5) $timeout = 5;
 
@@ -163,9 +163,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_online') {
     $primary_ip  = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
     curl_close($ch);
 
-    if ($http_code > 0) {
+    if ($http_code > 0 && !is_relay_error_code($http_code)) {
         $status = 'ok';
         $detail = "HTTP {$http_code} [{$primary_ip}] (timeout:{$timeout}s)";
+    } elseif ($http_code > 0) {
+        // 中継サーバーは応答したが、この PC まで届いていない
+        $status = 'ng';
+        $detail = "HTTP {$http_code} 中継サーバーからこの PC に接続できていません (timeout:{$timeout}s)";
     } else {
         $status = 'ng';
         $detail = "curl({$curl_errno}): {$curl_error} (timeout:{$timeout}s)";
@@ -389,16 +393,25 @@ function updatePfwdStatus(data) {
     applyPfwdRestriction(pfwdRunning);
 }
 
+// pfwd の起動・停止は管理者ログインが必要。ログインできなかったときは知らせる
+function fetchPfwdStatAfterExec(r) {
+    if (r.status === 401) {
+        alert('pfwd の起動・停止には管理者ログインが必要です');
+        return null;
+    }
+    return r.ok ? fetch('pfwdstat.php') : null;
+}
+
 function start_pfwdcmd() {
     fetch('pfwd_exec.php?pfwdstart=1')
-        .then(function(r) { return r.ok ? fetch('pfwdstat.php') : null; })
+        .then(fetchPfwdStatAfterExec)
         .then(function(r) { return r ? r.json() : null; })
         .then(function(data) { if (data) updatePfwdStatus(data); });
 }
 
 function stop_pfwdcmd() {
     fetch('pfwd_exec.php?pfwdstop=1')
-        .then(function(r) { return r.ok ? fetch('pfwdstat.php') : null; })
+        .then(fetchPfwdStatAfterExec)
         .then(function(r) { return r ? r.json() : null; })
         .then(function(data) { if (data) updatePfwdStatus(data); });
 }

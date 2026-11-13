@@ -2,6 +2,11 @@
 
 require_once 'kara_config.php';
 require_once 'prioritydb_func.php';
+require_once 'appblock_func.php';
+
+// ゆかナビ (モバイルアプリ) からのアクセス遮断。config.ini の appblock=1 のときだけ働く。
+// commonfunc.php は全ページ・全 API から読まれるため、ここに置けば一箇所で遮断できる。
+appblock_guard();
 
 date_default_timezone_set('Asia/Tokyo');
 
@@ -132,6 +137,9 @@ function file_get_html_with_retry($url, $retrytimes = 5, $timeoutsec = 1, $ipvar
         curl_setopt($ch, CURLOPT_TIMEOUT_MS, $timeoutsec_ms);
         }
         curl_setopt($ch, CURLOPT_FAILONERROR, true);
+        /* サーバー側から先に切断させる。先に切断した側に TIME_WAIT (約2分) が残るため、
+           これがないと localhost への定期呼び出しで httpd のエフェメラルポートが枯渇する */
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Connection: close'));
         //リダイレクト先追従
         //Locationをたどる
         curl_setopt($ch,CURLOPT_FOLLOWLOCATION,true);
@@ -288,10 +296,31 @@ function get_globalipv4(){
     return file_get_html_with_retry($checkglobakurl,1,1);
 }
 
+// オンライン接続用 URL のスキーム。中継サーバーが HTTPS に対応したポートでは設定 (globalhttps) で https にする
+function globalhost_scheme(){
+    return configbool('globalhttps', false) ? 'https://' : 'http://';
+}
+
+// 中継サーバー自身が返すエラー応答か。会場 PC まで届いていないので、到達確認では NG として扱う
+function is_relay_error_code($http_code){
+    return in_array((int)$http_code, array(502, 503, 504), true);
+}
+
+// 到達確認 (詳細診断) の 1 行分の結果表示を作る
+function online_check_result_text($http_code, $primary_ip, $curl_errno){
+    if ($http_code <= 0) {
+        return "NG curl({$curl_errno}): " . curl_strerror($curl_errno);
+    }
+    if (is_relay_error_code($http_code)) {
+        return "NG HTTP {$http_code} (中継サーバーからこの PC に接続できていません)";
+    }
+    return "OK HTTP {$http_code} (接続先IP: {$primary_ip})";
+}
+
 function check_online_available($host,$timeout = 2){
     global $config_ini;
     if($config_ini["connectinternet"] == 1){
-      $checkurl = 'http://'.urldecode($host);
+      $checkurl = globalhost_scheme().urldecode($host);
       $ret = file_get_html_with_retry($checkurl,2,4);
       if($ret === false)
         return 'NG';
@@ -1073,8 +1102,10 @@ function commentpost_v3($nm,$col,$size,$msg,$commenturl)
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 2);
     curl_setopt($curl, CURLOPT_TIMEOUT, 2);
+    curl_setopt($curl, CURLOPT_HTTPHEADER, array('Connection: close'));
     curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($POST_DATA));
     $output= curl_exec($curl);
+    curl_close($curl);
 
     if($output === false){
         return false;
@@ -1100,8 +1131,10 @@ function commentpost_v4($cmd,$msg,$commenturl)
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 2);
     curl_setopt($curl, CURLOPT_TIMEOUT, 2);
+    curl_setopt($curl, CURLOPT_HTTPHEADER, array('Connection: close'));
     curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($POST_DATA));
     $output= curl_exec($curl);
+    curl_close($curl);
 
     if($output === false){
         return false;
@@ -1516,7 +1549,7 @@ function print_bs5_head_core($page_css = [], $opts = []){
 /**
  * searchreserve 相当の予約方法タブHTMLを返す。
  * selectid が指定されている場合は各リンクに引き継ぐ。
- * $current には現在のページ ('search' | 'karaoke' | 'url' | 'pause' | 'bgv') を渡す。
+ * $current には現在のページ ('search' | 'setlist' | 'karaoke' | 'url' | 'pause' | 'bgv') を渡す。
  */
 function build_reservation_tabs($selectid = '', $current = 'search', $prefix = ''){
     global $config_ini, $playmode, $user, $connectinternet, $usenfrequset;
@@ -1533,6 +1566,7 @@ function build_reservation_tabs($selectid = '', $current = 'search', $prefix = '
     $icon_list    = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>';
     $icon_upload  = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path fill-rule="evenodd" d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>';
     $icon_nico    = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M0 1a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1V1zm4 0v6h8V1H4zm8 8H4v6h8V9zM1 1v2h2V1H1zm2 3H1v2h2V4zM1 7v2h2V7H1zm2 3H1v2h2v-2zm-2 3v2h2v-2H1zM15 1h-2v2h2V1zm-2 3v2h2V4h-2zm2 3h-2v2h2V7zm-2 3v2h2v-2h-2zm2 3h-2v2h2v-2z"/></svg>';
+    $icon_setlist = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v11A1.5 1.5 0 0 1 12.5 15h-9A1.5 1.5 0 0 1 2 13.5v-11zM3.5 2a.5.5 0 0 0-.5.5v11a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5v-11a.5.5 0 0 0-.5-.5h-9z"/><path d="M5 5.5A.5.5 0 0 1 5.5 5h5a.5.5 0 0 1 0 1h-5A.5.5 0 0 1 5 5.5zm0 2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5A.5.5 0 0 1 5 8zm0 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5z"/></svg>';
 
     $tabs = [];
 
@@ -1542,6 +1576,15 @@ function build_reservation_tabs($selectid = '', $current = 'search', $prefix = '
         'icon'  => $icon_search,
         'href'  => $pfx . 'search.php' . ($sid ? '?' . ltrim($sid, '&') : ''),
     ];
+
+    if (configbool("use_setlist_cool", false)) {
+        $tabs[] = [
+            'id'    => 'setlist',
+            'label' => 'クール一覧',
+            'icon'  => $icon_setlist,
+            'href'  => $pfx . 'setlist_cool_bs5.php' . ($sid ? '?' . ltrim($sid, '&') : ''),
+        ];
+    }
 
     $pm = isset($playmode) ? (int)$playmode : 0;
     if ($pm != 4 && $pm != 5) {
@@ -2005,6 +2048,32 @@ function print_bg_style_block($is_bs5 = false) {
     $vars[] = '--bg-overlay-alpha:' . $overlay_alpha . ';';
     $vars[] = '--bg-card-alpha:' . $card_alpha . ';';
 
+    // 背景画像の並べ方: cover = 画面全体に拡大 / tile = タイル状に繰り返し
+    $bg_tile = false;
+    if (array_key_exists("bg_image_mode", $config_ini)) {
+        $bg_tile = (strtolower(urldecode($config_ini["bg_image_mode"])) === 'tile');
+    }
+    // タイル1枚あたりの表示幅(px)。0 は画像の原寸で並べる。
+    $tile_size = 200;
+    if (array_key_exists("bg_tile_size", $config_ini)) {
+        $v = (int)$config_ini["bg_tile_size"];
+        if ($v < 0) $v = 0; if ($v > 600) $v = 600;
+        $tile_size = $v;
+    }
+    if ($has_bgimage) {
+        // 描画パラメータを CSS 変数として持たせる。html::before は疑似要素で JS から
+        // 直接スタイルを触れないため、init.php のライブプレビューはこの変数を差し替える。
+        if ($bg_tile) {
+            $vars[] = '--bg-image-repeat:repeat;';
+            $vars[] = '--bg-image-size:' . (($tile_size > 0) ? $tile_size . 'px auto' : 'auto') . ';';
+            $vars[] = '--bg-image-position:left top;';
+        } else {
+            $vars[] = '--bg-image-repeat:no-repeat;';
+            $vars[] = '--bg-image-size:cover;';
+            $vars[] = '--bg-image-position:center center;';
+        }
+    }
+
     print '<style>:root{' . implode('', $vars) . '}';
 
     if ($has_bgimage) {
@@ -2026,8 +2095,10 @@ function print_bg_style_block($is_bs5 = false) {
             . 'height:calc(100vh + 160px);'
             . 'height:calc(100lvh + 160px);'
             . 'z-index:-2;pointer-events:none;filter:none !important;'
-            . 'background-image:var(--bg-page-image);background-repeat:no-repeat;'
-            . 'background-size:cover;background-position:center center;'
+            . 'background-image:var(--bg-page-image);'
+            . 'background-repeat:var(--bg-image-repeat, no-repeat);'
+            . 'background-size:var(--bg-image-size, cover);'
+            . 'background-position:var(--bg-image-position, center center);'
             . 'transform:translate3d(0,0,0);-webkit-transform:translate3d(0,0,0);'
             . '-webkit-backface-visibility:hidden;backface-visibility:hidden;}';
         // スマホ縦持ち(縦長表示)のときだけ専用画像に切り替える。
@@ -2469,42 +2540,65 @@ function update_fromgit($version_str, &$errmsg){
           $execcmd = $gitcmd.' config --global core.autoCRLF false';
           exec($execcmd);
           
-          $execcmd = $gitcmd.' fetch --prune origin';
+          // git のエラーは標準エラー出力に出るため 2>&1 で拾い、終了コードでも判定する
+          // (標準出力しか見ていなかったころは、失敗しても「成功しました」と表示されていた)
+          $execcmd = $gitcmd.' fetch --prune origin 2>&1';
           set_time_limit (900);
-          exec($execcmd,$result_str);
+          $exitcode = 0;
+          exec($execcmd, $result_str, $exitcode);
           foreach($result_str as $line){
-              $err_str_pos = mb_strpos($line, "unable to access");
-              if( $err_str_pos !== false ) {
+              if (mb_strpos($line, "unable to access") !== false) {
                   $errmsg .= "network access failed";
                   $errorcnt ++;
-              }else if (mb_strstr($line, "fatal") !== false) {
-                  $errmsg .= "fetch unknown error: $line";
-                  $errorcnt ++;
+                  break;
               }
           }
-          if($errorcnt > 1){
+          if ($errorcnt === 0 && $exitcode !== 0) {
+              $errmsg .= "fetch に失敗しました: " . implode(" ", $result_str);
+              $errorcnt ++;
+          }
+          if($errorcnt > 0){
               return false;
           }
 
-          // origin/ プレフィックスあり → ブランチ切り替え (checkout -B)
+          // ZIP 方式と同じく、追跡ファイルのローカル変更は捨てて切替先の内容にそろえる
+          // (checkout --force / reset --hard)。この関数が書き換える version や、ZIP 方式で
+          // 上書きした後の作業ツリーが「local changes would be overwritten」で切替を
+          // 止めないようにするため。利用者データ (config.ini・request.db 等) は追跡外なので
+          // 影響しないが、画面から書き換える追跡ファイルだけは退避して戻す
+          // (ZIP 方式の除外リストと同じ趣旨)
+          $app_root = realpath(__DIR__);
+          $protect_files = ['listerdb_config.ini', 'search_sort_priority.json', 'search_sort_priority_auth.json'];
+          $saved_files = [];
+          foreach ($protect_files as $rel) {
+              $abs = $app_root . DIRECTORY_SEPARATOR . $rel;
+              if (file_exists($abs)) {
+                  $saved_files[$rel] = file_get_contents($abs);
+              }
+          }
+
+          // origin/ プレフィックスあり → ブランチ切り替え (checkout -f -B)
           // タグ / ハッシュ → 現在ブランチのまま reset --hard
           $result_str = [];
           if (strpos($version_str, 'origin/') === 0) {
               $branch_name = substr($version_str, strlen('origin/'));
-              $execcmd = $gitcmd . ' checkout -B ' . escapeshellarg($branch_name) . ' ' . escapeshellarg($version_str);
+              $execcmd = $gitcmd . ' checkout -f -B ' . escapeshellarg($branch_name) . ' ' . escapeshellarg($version_str) . ' 2>&1';
           } else {
-              $execcmd = $gitcmd . ' reset --hard ' . $version_str;
+              $execcmd = $gitcmd . ' reset --hard ' . escapeshellarg($version_str) . ' 2>&1';
           }
-          exec($execcmd, $result_str);
-          foreach($result_str as $line){
-              $err_str_pos = mb_strpos($line, "unknown revision");
-              if( $err_str_pos  !== false) {
+          $exitcode = 0;
+          exec($execcmd, $result_str, $exitcode);
+          if ($exitcode !== 0) {
+              $output = implode(" ", $result_str);
+              if (mb_strpos($output, "unknown revision") !== false || mb_strpos($output, "invalid reference") !== false) {
                   $errmsg .= "no version : $version_str";
-                  $errorcnt ++;
-              }else if (mb_strstr($line, "fatal") !== false) {
-                  $errmsg .= "checkout/reset unknown error: $line";
-                  $errorcnt ++;
+              } else {
+                  $errmsg .= "checkout/reset に失敗しました: " . $output;
               }
+              $errorcnt ++;
+          }
+          foreach ($saved_files as $rel => $content) {
+              file_put_contents($app_root . DIRECTORY_SEPARATOR . $rel, $content);
           }
 
           if ($errorcnt === 0) {
@@ -2512,7 +2606,6 @@ function update_fromgit($version_str, &$errmsg){
               // shallow clone では git describe が失敗する場合があるため GitHub API でフォールバック
               exec($gitcmd . ' fetch --tags origin 2>&1');
               $desc = trim(exec($gitcmd . ' describe --tags 2>&1'));
-              $app_root = realpath(__DIR__);
               if ($desc !== '' && mb_substr($desc, 0, 1) === 'v' && is_numeric(mb_substr($desc, 1, 1))) {
                   file_put_contents($app_root . DIRECTORY_SEPARATOR . 'version', $desc);
               } else {
@@ -2877,6 +2970,13 @@ function update_fromarchive($version_str, &$errmsg) {
         $exclude_list[] = 'request.db';
     }
     $exclude_list[] = 'images/bg';
+    $exclude_list[] = 'search_sort_priority.json';
+    $exclude_list[] = 'search_sort_priority_auth.json';
+    // りすたーDB設定 (listerdb_config.ini) は利用者が編集する設定ファイル (backup_restore.php でも
+    // 利用者データ扱い) なので、既にあれば上書きしない。無ければ既定値として配置する
+    if (file_exists($app_root . DIRECTORY_SEPARATOR . 'listerdb_config.ini')) {
+        $exclude_list[] = 'listerdb_config.ini';
+    }
 
     _kara_update_copy_recursive($source_dir, $app_root, $exclude_list);
 
@@ -3365,5 +3465,95 @@ function mypageAction(el, type) {
 }
 </script>
 JS;
+}
+
+// ==================== リスターDB検索の年齢制限オプトイン ====================
+
+/**
+ * 年齢制限タイアップ曲 (tie_up_age_limit >= 18) を検索結果に含めるかどうか。
+ * 利用者ごとのオプトイン方式: 既定は含めない。検索画面のチェックで有効化すると
+ * Cookie (YkariIncludeAgelimit=1) が保存され、その利用者の検索にだけ含まれる。
+ * リクエストパラメータ include_agelimit はサーバー内の JSON 呼び出しへの転送と
+ * アプリ (ゆかナビ) からの明示指定用 (Cookie より優先)。
+ */
+function listerdb_include_agelimit() {
+    if (array_key_exists('include_agelimit', $_REQUEST)) {
+        return $_REQUEST['include_agelimit'] == 1;
+    }
+    return isset($_COOKIE['YkariIncludeAgelimit']) && $_COOKIE['YkariIncludeAgelimit'] == 1;
+}
+
+/**
+ * 年齢制限タイアップ曲の絞り込み SQL 条件を返す。
+ * 含める設定の利用者には絞り込まない (空文字を返す)。
+ * 各リスターDB検索エンドポイントの WHERE 構築で共通に使う。
+ */
+function listerdb_agelimit_where() {
+    if (listerdb_include_agelimit()) {
+        return '';
+    }
+    return '(tie_up_age_limit IS NULL OR tie_up_age_limit < 18)';
+}
+
+/**
+ * 組み立て済みの WHERE 条件文字列 (WHERE キーワードなし) に年齢制限の絞り込みを
+ * AND で足す。既存条件は括弧で包む (anyword 検索の OR 連結が外側括弧なしのため、
+ * そのまま AND すると演算子の優先順位で誤結合する)。
+ */
+function listerdb_apply_agelimit($select_where) {
+    $agelimit = listerdb_agelimit_where();
+    if ($agelimit === '') {
+        return $select_where;
+    }
+    if (empty($select_where)) {
+        return $agelimit;
+    }
+    return '(' . $select_where . ') AND ' . $agelimit;
+}
+
+/**
+ * 年齢制限曲を含めるかのチェックボックス (BS5 検索ページ用)。
+ * 状態は js/agelimit_optin.js が Cookie で管理する (初回オン時に確認あり)。
+ * 同一ページで複数回呼んでもよい (スクリプトの読み込みは1回だけ出力)。
+ */
+function print_agelimit_optin_check() {
+    static $printed_script = false;
+    print '<div class="form-check mt-2">'
+        . '<label class="form-check-label small">'
+        . '<input class="form-check-input include-agelimit-check" type="checkbox"> '
+        . '年齢制限のある曲を検索結果に含める</label>'
+        . '</div>' . "\n";
+    if (!$printed_script) {
+        print '<script src="js/agelimit_optin.js"></script>' . "\n";
+        $printed_script = true;
+    }
+}
+
+/**
+ * サーバー内の JSON 呼び出し URL に、年齢制限曲を含める設定を転送する。
+ * ブラウザの Cookie はサーバー内 HTTP (localhost への file_get_contents) には
+ * 乗らないため、URL パラメータとして渡す。
+ */
+function listerdb_forward_agelimit($url) {
+    if (!listerdb_include_agelimit()) {
+        return $url;
+    }
+    return $url . (strpos($url, '?') === false ? '?' : '&') . 'include_agelimit=1';
+}
+
+/**
+ * ' WHERE ...' 形式 (または空) の句文字列に年齢制限の絞り込みを足す。
+ * 既に WHERE があれば AND、なければ WHERE として付ける。
+ * ORDER BY / LIMIT 等を連結する前に呼ぶこと。
+ */
+function listerdb_apply_agelimit_clause($where_clause) {
+    $agelimit = listerdb_agelimit_where();
+    if ($agelimit === '') {
+        return $where_clause;
+    }
+    if (trim($where_clause) === '') {
+        return ' WHERE ' . $agelimit;
+    }
+    return $where_clause . ' AND ' . $agelimit;
 }
 ?>

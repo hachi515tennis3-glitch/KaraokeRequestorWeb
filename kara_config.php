@@ -1,4 +1,11 @@
 <?php
+// 中継サーバーが TLS を終端している場合、PHP には HTTP で届く。
+// X-Forwarded-Proto を見て HTTPS 扱いにし、既存の $_SERVER['HTTPS'] 分岐をそのまま活かす。
+// (偽装されても、変わるのはその要求元に返す URL のスキームだけ)
+if (empty($_SERVER['HTTPS']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') {
+    $_SERVER['HTTPS'] = 'on';
+}
+
 $configfile = 'config.ini';
 $config_ini = array ();
 
@@ -149,6 +156,18 @@ function readconfig_array()
     if(!array_key_exists("usenewrequestlist", $config_ini)){
         $config_ini = array_merge($config_ini,array("usenewrequestlist" => 1));
     }
+    if(!array_key_exists("listerdb_index_default_collapsed", $config_ini)){
+        $config_ini["listerdb_index_default_collapsed"] = 1;
+    }
+    if(!array_key_exists("use_setlist_cool", $config_ini)){
+        $config_ini["use_setlist_cool"] = 2;
+    }
+    if(!array_key_exists("setlist_search_backend", $config_ini)){
+        $config_ini["setlist_search_backend"] = urlencode("listerdb");
+    }
+    if(!array_key_exists("setlist_stats_url", $config_ini)){
+        $config_ini["setlist_stats_url"] = urlencode("https://hachi515.github.io/karaoke_setlist/viewer.html");
+    }
     if(!array_key_exists("ui_skin_preset", $config_ini)){
         $config_ini["ui_skin_preset"] = urlencode("default");
     }
@@ -194,6 +213,14 @@ function readconfig_array()
     if(!array_key_exists("bg_overlay_opacity", $config_ini)){
         $config_ini["bg_overlay_opacity"] = 100;
     }
+    // 背景画像の並べ方: "cover" = 画面全体に拡大 / "tile" = タイル状に繰り返し
+    if(!array_key_exists("bg_image_mode", $config_ini)){
+        $config_ini["bg_image_mode"] = "cover";
+    }
+    // タイル1枚あたりの表示幅(px)。0 は画像の原寸で並べる。
+    if(!array_key_exists("bg_tile_size", $config_ini)){
+        $config_ini["bg_tile_size"] = 200;
+    }
 
     // アップデート取得元リポジトリ（owner/repo 形式）。
     // 開発移譲などで取得元が変わった場合、config.ini でこの値を書き換えれば
@@ -201,6 +228,24 @@ function readconfig_array()
     if(!array_key_exists("update_repo", $config_ini)){
         $update_repo = 'bee7813993/KaraokeRequestorWeb';
         $config_ini = array_merge($config_ini,array("update_repo" => urlencode($update_repo)));
+    }
+
+    // ==== ゆかナビ (モバイルアプリ) からのアクセス遮断 ====
+    // appblock=1 で有効。判定と応答は appblock_func.php を参照。
+    if(!array_key_exists("appblock", $config_ini)){
+        $config_ini = array_merge($config_ini,array("appblock" => 0));
+    }
+    if(!array_key_exists("appblock_web", $config_ini)){
+        $config_ini = array_merge($config_ini,array("appblock_web" => 1));
+    }
+    if(!array_key_exists("appblock_msg", $config_ini)){
+        $config_ini["appblock_msg"] = urlencode("ゆかナビからのアクセスをオフにしています");
+    }
+    if(!array_key_exists("appblock_url", $config_ini)){
+        $config_ini["appblock_url"] = urlencode("http://ykr.moe:11059/search_bs5.php");
+    }
+    if(!array_key_exists("appblock_ua", $config_ini)){
+        $config_ini["appblock_ua"] = urlencode("UnityPlayer|YukaNavi|ゆかナビ");
     }
 
     if($config_ini["playerpath_select"] == urlencode("その他PATH指定" )) {

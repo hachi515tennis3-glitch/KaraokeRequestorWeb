@@ -100,16 +100,16 @@ try {
     <div class="row g-2">
       <div class="col-6">
         <button class="btn btn-outline-primary player-btn w-100"
-                onclick="song_vdown()" aria-label="ボリュームDOWN">
+                onclick="song_vdown()" aria-label="音量ダウン">
           <?= $ic_vol_d ?>
-          <span class="small">Vol−</span>
+          <span class="small">音量ダウン</span>
         </button>
       </div>
       <div class="col-6">
         <button class="btn btn-outline-primary player-btn w-100"
-                onclick="song_vup()" aria-label="ボリュームUP">
+                onclick="song_vup()" aria-label="音量アップ">
           <?= $ic_vol_u ?>
-          <span class="small">Vol＋</span>
+          <span class="small">音量アップ</span>
         </button>
       </div>
     </div>
