@@ -14,7 +14,7 @@ if ($_SERVER['PHP_AUTH_USER'] !== 'admin'){
     die('設定画面の表示にはログインが必要です');
 }
 
-if (! $configauth -> check_auth($_SERVER['PHP_AUTH_PW']) ){
+if (! $configauth -> check_auth($_SERVER['PHP_AUTH_PW'] ?? '') ){
     header('WWW-Authenticate: Basic realm="Configuration page authorization."');
     die('設定画面の表示にはログインが必要です');
 }
@@ -1757,6 +1757,18 @@ $listerdb_index_default_collapsed = configbool("listerdb_index_default_collapsed
     </label>
     <label class="radio-inline">
       <input type="radio" name="connectinternet" value="2" <?php print ($config_ini["connectinternet"]!=1)?'checked':' ' ?> /> 使用しない
+    </label>
+  </div>
+
+  <div class="mb-3">
+    <?php $show_yukanavi_link = configbool("show_yukanavi_link", true); ?>
+    <h3 class="radio form-label"> 接続情報ページのスマホアプリ案内 </h3>
+    <label class="form-label"><small>接続情報ページに、スマホアプリ「ゆかナビ」の入手用QRコードとリンクを表示します</small></label>
+    <label class="radio-inline">
+      <input type="radio" name="show_yukanavi_link" value="1" <?php print ($show_yukanavi_link) ? 'checked' : ' '; ?> /> 表示する
+    </label>
+    <label class="radio-inline">
+      <input type="radio" name="show_yukanavi_link" value="2" <?php print (!$show_yukanavi_link) ? 'checked' : ' '; ?> /> 表示しない
     </label>
   </div>
 

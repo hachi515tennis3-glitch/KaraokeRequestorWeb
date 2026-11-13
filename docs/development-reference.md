@@ -162,6 +162,8 @@ lister_comment TEXT DEFAULT ''    -- ListerDB comment
 | `nonamerequest` | bool | `0` | Allow anonymous requests |
 | `nonameusername` | string | — | Default name for anonymous requests |
 | `connectinternet` | bool | `1` | Allow internet search integrations |
+| `globalhost` | string | — | Online access host as `host:port` (relay server or DDNS) |
+| `globalhttps` | bool | `0` | Use `https://` for the online URL, QR code and reachability check (enable when the relay server terminates TLS for the port) |
 | `historylog` | bool | `0` | Enable history logging |
 | `bgimage` | string | — | Active background image filename |
 | `bg_card_opacity` | int | — | Card background opacity 0–100 |
@@ -185,8 +187,9 @@ Use `configbool($keyword, $defaultvalue)` (in `commonfunc.php`) to safely read b
 **Admin (init.php)**: HTTP Basic Auth via `configauth_class.php`
 ```php
 if ($_SERVER['PHP_AUTH_USER'] !== 'admin') { /* 401 */ }
-if (!$configauth->check_auth($_SERVER['PHP_AUTH_PW'])) { /* 401 */ }
+if (!$configauth->check_auth($_SERVER['PHP_AUTH_PW'] ?? '')) { /* 401 */ }
 ```
+Always read the password as `$_SERVER['PHP_AUTH_PW'] ?? ''`. Since PHP 8.2.25 / 8.3.13 the key is not defined at all when the Basic auth password is empty (e.g. `admin` with a blank password), so a bare read raises "Undefined array key" and the warning text breaks JSON responses.
 Password stored bcrypt-hashed. Master password separate from user password.
 
 **Easy Auth**: Cookie-based simple password for general access via `easyauth_class.php`
