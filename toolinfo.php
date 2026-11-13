@@ -46,14 +46,19 @@ $easypass_q = ($config_ini['useeasyauth'] == 1)
     ? '?easypass=' . urlencode($config_ini['useeasyauth_word'])
     : '';
 
-// ホスト名（localhost は除外）。スキームはアクセスしてきたものに合わせる
-// (中継サーバー経由の HTTPS で開いたときに http:// の URL を出さないため)
+// スキーム判定（Tailscale Funnel等のHTTPSリバースプロキシ経由を考慮）
+$is_https_request = (
+    (!empty($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) !== 'off') ||
+    (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') ||
+    (!empty($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
+);
+$url_scheme = $is_https_request ? 'https://' : 'http://';
+
+// ホスト名（localhost は除外）
 $http_host      = $_SERVER['HTTP_HOST'];
 $host_only      = strtolower(explode(':', $http_host)[0]);
 $localname_valid = ($host_only !== 'localhost');
-$localhosturl   = $localname_valid
-    ? (empty($_SERVER['HTTPS']) ? 'http://' : 'https://') . $http_host . '/' . $easypass_q
-    : '';
+$localhosturl   = $localname_valid ? $url_scheme . $http_host . '/' . $easypass_q : '';
 
 // IPv6・ループバックを除外した IPv4 アドレスのみ表示
 $server_addr   = $_SERVER['SERVER_ADDR'];
