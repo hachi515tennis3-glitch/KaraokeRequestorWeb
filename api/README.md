@@ -156,29 +156,6 @@ ListerDB 未設定時は 503。
 | `quarters` | `year` | `{ "year":2026, "quarters":[{"q":2,"label":"4月〜6月：春","songs":192,"programs":43},...] }` |
 | `programs` | `year`, `quarter` (1〜4) | `{ "year","quarter","label", "programs":[{"program":"作品名","group":"シリーズ名 or null","songs":5},...] }` |
 | `songs` | `program` / `artist` / `group` / `worker` のいずれか（複数は AND、完全一致） | `{ "total":N, "items":[{ song_name, song_ruby, song_artist, program_name, tie_up_group_name, song_op_ed, found_worker, found_path, found_file_size, found_comment },...] }` (最大300件) |
-| `rules` | - | `{ "count":N, "folders":[{ "folder":"設定フォルダー", "file_name_rules":["[<Artist>]<Title>_<Program>",...], "folder_name_rules":["<Worker>=AAA",...], "source":"YukaLister.json" },...] }` |
-
-`songs&anyword=キーワード` はあいまい検索（スペース区切り AND、読み仮名対応）。曲名・歌手名・作品名・
-シリーズ名・製作会社・ファイルパスに加えて、ゆかりすたーの検索ワード（`found_comment` の `,//` 以降に
-書かれる作品・シリーズ・曲の別名・略称とその読み）も対象。Web 版のファイル検索と同じ範囲。
-
-`songs` の各項目には、上記に加えて次も付く（クライアント (ゆかナビ) の検索精度向上・表示用。旧クライアントは無視してよい）。
-
-- 曲ごと: `song_ruby` / `artist_ruby` / `tie_up_ruby` / `tie_up_group_ruby`（ゆかりすたーの検索用フリガナ。
-  全角カタカナ・濁点なし・小書きなし・長音なし。設定により `,長音あり版` が付く。複数歌手は `,` 区切り。
-  読みの無い項目は表記そのまま）、`program_category`（アニメ / ゲーム など）、`song_release_date`（`YYYY-MM-DD`、無ければ null）
-- ファイルごと: `found_keyword`（文字列の配列。ゆかりすたーが `found_comment` の `,//` 以降に書き込む検索ワード =
-  作品・シリーズ・曲に登録された別名・略称とその読み。表示用の `found_comment` からは除いてある）、
-  `song_id` / `tie_up_id`（`!` で始まる `song_id` は楽曲情報 DB 未ヒットで、ファイル名・フォルダー設定から登録された行）、
-  `found_last_write_time`（`YYYY-MM-DDTHH:MM:SS`、ゆかりすたーの PC の現地時刻）、
-  `found_track`、`found_smart_track_on` / `found_smart_track_off`（オン / オフボーカルのトラックがあるか）
-
-`rules` は、ゆかりすたーのフォルダー設定（動画フォルダーに置かれた `YukaLister.json`。旧形式の
-`YukaLister.config` / `NicoKaraLister.config` も可）に書かれたファイル命名規則を、設定フォルダーごとに返す
-（クライアント (ゆかナビ) の検索精度向上用）。規則の書式はゆかりすたーのフォルダー設定そのまま。
-親フォルダーの設定は下のフォルダーにも効くため、クライアントは最も深く一致する設定フォルダーの規則を使う。
-リスト DB のフォルダーがこのサーバーから読めない環境（別 PC のリスト DB を参照している等）では `count` が 0。
-フォルダーを全部たどるため、結果は一時フォルダーに 10 分キャッシュする（`nocache=1` で作り直し）。
 
 ### /api/song_metadata.php — 曲メタデータの取得と修正
 

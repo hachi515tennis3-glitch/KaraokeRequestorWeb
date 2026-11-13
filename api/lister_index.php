@@ -19,14 +19,10 @@
  *                                  quarter=0 で年全体 (年代別ビュー)
  *   programs&group=シリーズ名     → シリーズ内の作品一覧 (シリーズ再検索用)
  *   songs&program=|artist=|group=|worker= → 完全一致の曲一覧 (複数指定は AND)
- *   songs&anyword=キーワード      → あいまい検索 (スペース区切り AND、読み仮名対応。ゆかりすたーの
- *                                  検索ワード [found_comment の ",//" 以降の別名・略称] も対象)
+ *   songs&anyword=キーワード      → あいまい検索 (スペース区切り AND、読み仮名対応)
  *   initials&target=program|artist|group  → 頭文字 (ひらがな清音 + その他) ごとの名前数
  *   names&target=...&initial=あ   → 頭文字が一致する名前一覧 (作品名 / 歌手名 / シリーズ名)
  *   names&target=...&keyword=...  → 名前の部分一致一覧 (読み仮名対応)
- *   rules                        → ゆかりすたーのフォルダー設定 (YukaLister.json 等) のファイル命名規則を
- *                                  設定フォルダーごとに (クライアントの検索精度向上用。フォルダーが読めない環境では空)。
- *                                  結果は 10 分キャッシュ (nocache=1 で作り直す)
  *
  * songs の応答は曲単位にグルーピングされ、同じ曲の複数ファイル (別動画) が files に並ぶ。
  * songs&flat=1 でグルーピングせずファイル単位 (1アイテム=1ファイル) で返す (応答構造は同じ)。
@@ -40,34 +36,12 @@
  *   songs:    { "ok":true, "data":{ "total":2, "files_total":3, "agelimit_hidden":0, "items":[
  *               { "song_name":"...", "song_artist":"...", "program_name":"...",
  *                 "tie_up_group_name":"...", "song_op_ed":"3rdシングル",
- *                 "song_ruby":"...", "artist_ruby":"...", "tie_up_ruby":"...", "tie_up_group_ruby":"...",
- *                 "program_category":"アニメ", "song_release_date":"2024-04-01",
  *                 "files":[{ "found_path":"...", "found_comment":"リリックビデオ",
- *                            "found_keyword":["ハガレン","ハカレン"],
- *                            "found_worker":"...", "found_file_size":123,
- *                            "song_id":"...", "tie_up_id":"...",
- *                            "found_last_write_time":"2026-08-12T20:48:00",
- *                            "found_track":"On-Off", "found_smart_track_on":true, "found_smart_track_off":true },...] },...] } }
- *   items の読み仮名 4 つ (song_ruby / artist_ruby / tie_up_ruby / tie_up_group_ruby) はゆかりすたーの
- *   検索用フリガナ (全角カタカナ・濁点なし・小書きなし・長音なし。設定により ",長音あり版" が付く。
- *   複数歌手は "," 区切り。読みの無い項目は表記そのまま)。song_release_date はリリース日 (無ければ null)。
- *   files の found_keyword: ゆかりすたーが found_comment の ",//" 以降に付ける検索ワード
- *   (作品・シリーズ・曲に登録された別名や略称) を分けたもの。表示用の found_comment には含めない。
- *   files の song_id が "!" で始まる行は楽曲情報 DB にヒットせず、ファイル名・フォルダー設定から
- *   登録された行 (tie_up_id も同様)。found_last_write_time はファイルの更新日時 (ゆかりすたーの
- *   PC の現地時刻)。found_smart_track_on/off はオン/オフボーカルのトラックがあるか。
- *   これらはクライアント (ゆかナビ) が検索精度の向上と表示に使う。
+ *                            "found_worker":"...", "found_file_size":123 },...] },...] } }
  *   songs の agelimit_hidden: 年齢制限フィルタで隠れた曲数 (include_agelimit=1 のときは常に 0)。
  *   まだ有効化していない利用者へ「年齢制限の曲が N 曲あります」の案内を出すのに使う。
- *   rules:    { "ok":true, "data":{ "count":2, "folders":[
- *               { "folder":"D:\動画\AAA", "file_name_rules":["[<Artist>]<Title>_<Program>"],
- *                 "folder_name_rules":["<Worker>=AAA"], "source":"YukaLister.json" },...] } }
- *   規則の書式はゆかりすたーのフォルダー設定そのまま (<Title> <Artist> <Program> <Oped> <Track> <Comment>
- *   等の変数と、任意の文字列 *)。親フォルダーの設定が下にも効くので、クライアントは最も深い
- *   一致フォルダーの規則を使う。
  */
 require_once __DIR__ . '/_common.php';
-require_once __DIR__ . '/_lister_rules.php';
 
 // ---- ListerDB を開く ----
 $lister_dbpath = 'list\List.sqlite3';
@@ -113,18 +87,6 @@ function quarter_label($q)
 {
     static $labels = [1 => '1月〜3月：冬', 2 => '4月〜6月：春', 3 => '7月〜9月：夏', 4 => '10月〜12月：秋'];
     return $labels[$q] ?? '';
-}
-
-/**
- * 修正ユリウス日 → 日付/日時文字列 (0 以下・未設定は null)。
- * ゆかりすたーは現地時刻をそのまま日数に換算して書き込むため、UTC として戻せば現地の日時になる。
- */
-function lister_mjd_to_string($mjd, $format)
-{
-    if ($mjd === null || (float)$mjd <= 0) {
-        return null;
-    }
-    return gmdate($format, (int)floor(((float)$mjd - 40587) * 86400));
 }
 
 // ---- あいまい検索 (search_listerdb_songlist_json.php の anyword と同じ規則) ----
@@ -428,11 +390,6 @@ if ($mode === 'songs') {
             lister_like_cond($ldb, 'tie_up_group_name', 'tie_up_group_ruby', $anyword),
             lister_like_cond($ldb, 'maker_name', 'maker_ruby', $anyword),
             lister_like_cond($ldb, 'found_path', null, $anyword),
-            // ゆかりすたーの検索ワード (found_comment の ",//" 以降にある作品・シリーズ・曲の別名や略称と
-            // その読み)。Web 版のファイル検索 (search_listerdb_filelist_json.php) と同じく対象にする。
-            // 「ハガレン」で鋼の錬金術師の曲が出るのはこれによる。読み (濁点なしカタカナ) も並んでいるので、
-            // かな入力は kanabuild した形でも当てる
-            lister_like_cond($ldb, 'found_comment', 'found_comment', $anyword),
         ], function ($cond) { return $cond !== ''; });
         if (count($orConds) > 0) {
             $where[] = '(' . implode(' OR ', $orConds) . ')';
@@ -476,10 +433,7 @@ if ($mode === 'songs') {
     // ファイル単位で引いて (重複行は found_path でまとめる)、PHP 側で曲単位にグルーピングする
     $stmt = $ldb->prepare(
         'SELECT song_name, song_ruby, song_artist, program_name, tie_up_group_name,'
-        . ' song_op_ed, found_worker, found_path, found_file_size, found_comment,'
-        . ' song_id, tie_up_id, found_artist_ruby, tie_up_ruby, tie_up_group_ruby,'
-        . ' program_category, song_release_date, found_last_write_time,'
-        . ' found_track, found_smart_track_on, found_smart_track_off'
+        . ' song_op_ed, found_worker, found_path, found_file_size, found_comment'
         . " FROM t_found WHERE $whereSql"
         . " GROUP BY found_path ORDER BY $orderSql LIMIT 600"
     );
@@ -508,47 +462,19 @@ if ($mode === 'songs') {
                 'program_name'      => $row['program_name'],
                 'tie_up_group_name' => $row['tie_up_group_name'],
                 'song_op_ed'        => $row['song_op_ed'],
-                // 読み仮名 (ゆかりすたーの検索用フリガナ) とリリース日・カテゴリー
-                // (クライアントの検索精度向上・表示用)
-                'song_ruby'         => $row['song_ruby'],
-                'artist_ruby'       => $row['found_artist_ruby'],
-                'tie_up_ruby'       => $row['tie_up_ruby'],
-                'tie_up_group_ruby' => $row['tie_up_group_ruby'],
-                'program_category'  => $row['program_category'],
-                'song_release_date' => lister_mjd_to_string($row['song_release_date'], 'Y-m-d'),
                 'files'             => [],
             ];
         }
-        // コメントの ",//" 以降は内部メモのため表示用からは除去 (listerdb_lookup_songinfo と同じ)。
-        // 内部メモの実体はゆかりすたーの検索ワード (作品・シリーズ・曲の別名・略称とその読み。
-        // ",//語,読み,,//語,..." の形) なので、分解して found_keyword として別に返す
+        // コメントの ",//" 以降は内部メモのため除去 (listerdb_lookup_songinfo と同じ)
         $comment = '';
-        $keywords = [];
         if (!empty($row['found_comment'])) {
-            $parts = explode(',//', $row['found_comment'], 2);
-            $comment = trim($parts[0]);
-            if (count($parts) > 1) {
-                foreach (preg_split('/,(?:\/\/)?/', $parts[1]) as $keyword) {
-                    $keyword = trim($keyword);
-                    if ($keyword !== '' && !in_array($keyword, $keywords, true)) {
-                        $keywords[] = $keyword;
-                    }
-                }
-            }
+            $comment = trim(preg_replace('/\,\/\/.*/', '', $row['found_comment']));
         }
         $items[$index[$key]]['files'][] = [
             'found_path'      => $row['found_path'],
             'found_comment'   => $comment,
-            'found_keyword'   => $keywords,
             'found_worker'    => $row['found_worker'],
             'found_file_size' => (int)$row['found_file_size'],
-            // "!" で始まる song_id は楽曲情報 DB 未ヒット (ファイル名・フォルダー設定からの登録)
-            'song_id'         => $row['song_id'],
-            'tie_up_id'       => $row['tie_up_id'],
-            'found_last_write_time' => lister_mjd_to_string($row['found_last_write_time'], 'Y-m-d\TH:i:s'),
-            'found_track'     => $row['found_track'],
-            'found_smart_track_on'  => (bool)$row['found_smart_track_on'],
-            'found_smart_track_off' => (bool)$row['found_smart_track_off'],
         ];
         $filesTotal++;
     }
@@ -560,13 +486,4 @@ if ($mode === 'songs') {
     ]);
 }
 
-if ($mode === 'rules') {
-    // フォルダーを全部たどるので初回は時間がかかりうる。クライアントが待ちきれず切っても
-    // 最後まで走らせてキャッシュ (10 分) を作り、次の要求をすぐ返せるようにする
-    ignore_user_abort(true);
-    @set_time_limit(300);
-    $cacheKey = api_param('nocache', '') == 1 ? '' : $lister_dbpath;
-    api_ok(lister_rules_collect($ldb, $cacheKey));
-}
-
-api_error('mode が不正です (years / quarters / programs / songs / initials / names / rules)');
+api_error('mode が不正です (years / quarters / programs / songs)');
