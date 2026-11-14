@@ -187,6 +187,10 @@ function stopautoplay()
 
 function startautoplay()
 {
+    // 停止直後は古い窓が閉じきるまで残るため、最大5秒待ってから起動済みかを判定する
+    for ($i = 0; $i < 5 && checkautoplay() != 0; $i++) {
+        sleep(1);
+    }
     if (checkautoplay() == 0) {
         global $config_ini;
         $execcmd = 'start "karaokeautorun" ' . urldecode($config_ini['autoplay_exec']);
